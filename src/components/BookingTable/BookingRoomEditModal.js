@@ -23,13 +23,17 @@ const ContactEditModal = ({
   editContactEditModal,
   setEditContactEditModal,
   roomStatus,
+  fetchRoomDetails,
 }) => {
   ContactEditModal.propTypes = {
     contactData: PropTypes.object,
     editContactEditModal: PropTypes.bool,
     setEditContactEditModal: PropTypes.func,
     roomStatus: PropTypes.array,
+    fetchRoomDetails: PropTypes.func,
   };
+
+  // const [loading, setLoading] = useState(true);
 
   const [contactinsert, setContactInsert] = useState(null);
 
@@ -73,17 +77,57 @@ const ContactEditModal = ({
   ]);
 
   // Function to edit data in the database
+
+  const editOrderItemUpdate = async () => {
+    try {
+      const isConfirmed = window.confirm("Are you sure you want to update this Booking?");
+    
+      if (!isConfirmed) {
+        return; // Stop execution if the user cancels
+      }
+
+  
+      const orderItem = {
+        booking_service_id: contactinsert.booking_service_id,
+        order_id: contactinsert.order_id,
+        unit_price: contactinsert.amount,
+        cost_price: contactinsert.amount * (contactinsert.qty || 1),
+        item_title: contactinsert.room_type,
+        qty: contactinsert.qty || 1,
+        grand_total: contactinsert.grand_total,
+      };
+  
+      console.log("Updating order item:", orderItem);
+  
+      const response = await api.post('/finance/editorderItem', orderItem);
+  
+      if (response.status === 200) {
+        alert("Order has been updated successfully.");
+        window.location.reload();
+      } else {
+        alert("Failed to update order item.");
+      }
+    } catch (error) {
+      console.error("Error updating order item:", error);
+      alert("Failed to update order item.");
+    }
+  };
+  
+
   const editContactsData = () => {
     api
       .post('/booking/edit-Booking-History', contactinsert)
       .then(() => {
         message('Record edited successfully', 'success');
+        fetchRoomDetails(contactinsert.booking_id);
+        editOrderItemUpdate()
         setEditContactEditModal(false);
       })
       .catch(() => {
         message('Unable to edit record.', 'error');
       });
   };
+
 
   return (
     <>

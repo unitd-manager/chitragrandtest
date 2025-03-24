@@ -1,185 +1,103 @@
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import { Button, Container, Row, Col, Card, Table, Input, Label } from 'reactstrap';
+import React, { useState,useEffect } from "react";
+// import PropTypes from "prop-types";
+import { Button, Container, Row, Col, Card, Table, Input,Label } from "reactstrap";
 import Select from 'react-select';
-import api from '../../../constants/api';
+import { useNavigate } from 'react-router-dom';
+import api from "../../../constants/api";
 import TenderContactDetails from '../../TenderTable/TenderContactDetails';
 
-const HotelDashboard3 = ({
-  bookingCartId,
-  sessionId,
-  selectedRooms,
-  // setSelectedRooms,
-  actionType,
-}) => {
-  const [roomDetails, setRoomDetails] = useState([]);
+const Reservation = () => {
   const [bookingId, setBookingId] = useState(null);
+  const navigate = useNavigate();
+  // const [selectedRoomType, setSelectedRoomType] = useState("");
   const [contactIds, setContactId] = useState('');
-
-  console.log('selectedRooms', selectedRooms);
-  console.log('roomDetails', roomDetails);
   const [customer, setCustomer] = useState({
-    name: '',
-    address: '',
-    address_flat: '',
-    address_state: '',
-    phone: '',
-    email: '',
-    city: '',
-    gst_no: '',
-    address_country: '',
-    address_po_code: '',
-    checkInTime: '',
-    checkInDate: '',
+    // first_name: '',
+    // address: '',
+    // address_flat: '',
+    // address_state: '',
+    // mobile: '',
+    // email: '',
+    // city: '',
+    // gst_no: '',
+    // address_country: '',
+    // address_po_code: '',
+    assign_time: '',
+    booking_date: '',
+    to_booking_date:'',
+    to_assign_time:'',
     contact_id:'',
+    delux:'',
+    super_delux_double:'',
+    delux_triple:'',
     confirmed: false,
   });
 
-  const updateRoomSelection = () => {
-    if (!sessionId || !actionType || !bookingCartId) {
-      alert('Missing session ID, action type, or booking cart ID.');
-      return;
-    }
-
-    if (!selectedRooms || selectedRooms.length === 0) {
-      alert('No rooms selected.');
-      return;
-    }
-
-    const requestData = {
-      sessionId,
-      actionType,
-      bookingCartId,
-      rooms: selectedRooms.map(({ roomhistoryId }) => ({
-        roomhistoryId,
-        isAvailable: 'No',
-      })),
-    };
-
-    console.log('📌 Sending API Request:', JSON.stringify(requestData, null, 2));
-
-    api
-      .post('/bookingcart/update-room-selection', requestData)
-      .then((res) => {
-        console.log('API Response:', res.data); // Log the response
-
-        // Check if res.data is an array
-        if (Array.isArray(res.data)) {
-          res.data.forEach((item) => {
-            console.log(item); // Process each item
-          });
-        } else if (res.data && res.data.rooms && Array.isArray(res.data.rooms)) {
-          // If res.data has rooms and it's an array, loop through it
-          res.data.rooms.forEach((room) => {
-            console.log(room); // Process each room
-          });
-        } else if (res.data && typeof res.data === 'object') {
-          // If res.data is an object but not an array, use Object.keys(), Object.values(), or Object.entries()
-          // Example using Object.keys():
-          Object.keys(res.data).forEach((key) => {
-            console.log(key, res.data[key]); // Iterate over each key-value pair
-          });
-
-          // Or Example using Object.values():
-          Object.values(res.data).forEach((value) => {
-            console.log(value); // Iterate over each value
-          });
-
-          // Or Example using Object.entries():
-          Object.entries(res.data).forEach(([key, value]) => {
-            console.log(key, value); // Iterate over each key-value pair
-          });
-        } else {
-          console.error('Data is not iterable:', res.data);
-        }
-
-        // Handling success or failure
-        if (res.data.success) {
-          alert('✅ Rooms updated successfully!');
-          // setSelectedRooms([]); // Clear selection
-          // Set the flag to true
-        } else {
-          throw new Error(res.data.message || 'Unknown error');
-        }
-      })
-      .catch((err) => {
-        console.error('🚨 API Error:', err.response?.data || err.message);
-        alert('⚠ Failed to update rooms. Please try again.');
-      });
-  };
-
-  // Ensure function is defined before calling it
-  if (typeof updateRoomSelection !== 'function') {
-    console.error('updateRoomSelection is not defined.');
-  }
-
-  // Fetch room details based on bookingCartId
-  useEffect(() => {
-    if (bookingCartId) {
-      api
-        .post('/bookingcart/get-room-details', { booking_cart_id: bookingCartId })
-        .then((res) => {
-          if (Array.isArray(res.data.data)) {
-            setRoomDetails(res.data.data);
-          } else if (res.data.data) {
-            setRoomDetails([res.data.data]);
-          } else {
-            setRoomDetails([]);
-            console.error('Unexpected response format:', res.data);
-          }
-        })
-        .catch((err) => {
-          console.error('Error fetching room details:', err);
-          setRoomDetails([]);
-        });
-    }
-  }, [bookingCartId]);
-
-  // Handle input change
+  // Handle input changes
   const handleInputChange = (e) => {
     setCustomer({ ...customer, [e.target.name]: e.target.value });
   };
 
+  const handleNavigation = () => {
+    navigate("/Reservation");
+  };
+
   // Confirm Check-in
   const confirmCheckin = () => {
-    if (
-      !bookingCartId ||
-      !customer.mobile ||
-      !customer.address_flat ||
-      !customer.checkInTime ||
-      !customer.checkInDate 
-    ) {
-      alert('Please fill in all required fields.');
+
+    if ( !customer.contact_id ) {
+      alert("Please fill in Name fields.");
+      return;
+    } 
+    if ( !customer.booking_date ) {
+      alert("Please fill in From Date fields.");
       return;
     }
+    if ( !customer.to_assign_time ) {
+      alert("Please fill in To Time fields.");
+      return;
+    }
+    if ( !customer.to_booking_date ) {
+      alert("Please fill in To date fields.");
+      return;
+    }
+    if ( !customer.assign_time ) {
+      alert("Please fill in From Time fields.");
+      return;
+    }
+    
 
     api
-      .post('/bookingcart/confirm-checkins', {
-        booking_cart_id: bookingCartId,
-        name: customer.first_name,
-        address: customer.address,
-        phone: customer.mobile,
-        email: customer.email,
-        city: customer.city,
-        address_country: customer.address_country,
-        address_flat: customer.address_flat,
-        address_state: customer.address_state,
-        gst_no: customer.gst_no,
-        address_po_code: customer.address_po_code,
-        check_in_time: customer.checkInTime,
-        check_in_date: customer.checkInDate,
-        contact_id:contactIds
+      .post("/booking/getReservationValidationInsert", {
+        // first_name: customer.first_name,
+        // address: customer.address,
+        // mobile: customer.mobile,
+        // email: customer.email,
+        // city: customer.city,
+        // address_country: customer.address_country,
+        // address_flat: customer.address_flat,
+        // address_state: customer.address_state,
+        // gst_no: customer.gst_no,
+        // address_po_code: customer.address_po_code,
+        assign_time: customer.assign_time,
+        booking_date: customer.booking_date,
+        to_assign_time: customer.to_assign_time,
+        to_booking_date: customer.to_booking_date,
+        contact_id:contactIds,
+        delux:customer.delux,
+        super_delux_double:customer.super_delux_double,
+        delux_triple:customer.delux_triple,
       })
       .then((res) => {
-        console.log('Check-in Response:', res.data);
+        console.log("Check-in Response:", res.data);
         if (res.data.booking_id) {
-          setBookingId(res.data.booking_id);
+          setBookingId(res.data.contact_id);
           setCustomer((prev) => ({ ...prev, confirmed: true }));
-          updateRoomSelection();
+          handleNavigation()
         }
       })
       .catch((err) => {
-        console.error('Error confirming check-in:', err);
+        console.error("Error confirming check-in:", err);
       });
   };
 
@@ -283,24 +201,57 @@ const HotelDashboard3 = ({
 
   return (
     <Container className="mt-4">
+      <h2 
+  className="mb-4 text-center fw-bold text-uppercase p-3 bg-primary text-white rounded shadow-sm"
+>
+<i className="fas fa-calendar-check me-2"></i> Reservation
+</h2>
+ 
       <Row>
         <Col md="6">
           <Card className="shadow p-3 h-100">
-            <h5 className="mb-3 text-center">Room Availability</h5>
+            <h5 className="mb-3 text-center">Room Selection</h5>
             <Table bordered className="text-center">
-              <thead style={{ backgroundColor: '#87CEFA', color: 'red' }}>
+              <thead style={{ backgroundColor: "#87CEFA", color: "red" }}>
                 <tr>
-                  <th>Room Type</th>
-                  <th>Room Numbers</th>
+                  <th>Delux</th>
+                  <th>Super Delux Double</th>
+                  <th>Delux Triple</th>
                 </tr>
               </thead>
               <tbody>
-                {selectedRooms?.map((room) => (
-                  <tr key={room?.roomId}>
-                    <td className="fw-bold">{room?.roomType}</td> {/* Correct property name */}
-                    <td>{room?.roomNumber}</td> {/* Correct property name */}
-                  </tr>
-                ))}
+                <tr>
+                    <td>
+                    <Input
+                      type="number"
+                      name="delux"
+                      className="mb-3"
+                      min="1"
+                      value={customer.delux}
+                      onChange={handleInputChange}
+                    />
+                  </td>
+                  <td>
+                    <Input
+                      type="number"
+                      name="super_delux_double"
+                      className="mb-3"
+                      min="1"
+                      value={customer.super_delux_double}
+                      onChange={handleInputChange}
+                    />
+                  </td>
+                  <td>
+                    <Input
+                      type="number"
+                      name="delux_triple"
+                      className="mb-3"
+                      min="1"
+                      value={customer.delux_triple}
+                   onChange={handleInputChange}
+                    />
+                  </td>
+                </tr>
               </tbody>
             </Table>
           </Card>
@@ -347,7 +298,7 @@ const HotelDashboard3 = ({
                 />
               </Col>
             </Row>
-            <Input type="text" name="first_name" placeholder="Full Name" className="mb-2" value={customer.first_name} onChange={handleInputChange} />
+            {/* <Input type="text" name="first_name" placeholder="Full Name" className="mb-2" value={customer.first_name} onChange={handleInputChange} /> */}
             {/* <Input
               type="textarea"
               name="address"
@@ -356,16 +307,16 @@ const HotelDashboard3 = ({
               value={customer.address}
               onChange={handleInputChange}
             /> */}
-            <Input
+            {/* <Input
               type="textarea"
               name="address_flat"
               placeholder="Area"
               className="mb-2"
               value={customer.address_flat}
               onChange={handleInputChange}
-            />
+            /> */}
             <Row>
-              <Col md="6">
+              {/* <Col md="6">
                 <Input
                   type="text"
                   name="phone"
@@ -437,24 +388,44 @@ const HotelDashboard3 = ({
                   value={customer.gst_no}
                   onChange={handleInputChange}
                 />
-              </Col>
+              </Col> */}
               <Col md="6">
                 <Label>Check in Date</Label>
                 <Input
                   type="date"
-                  name="checkInDate"
+                  name="booking_date"
                   className="mb-3"
-                  value={customer.checkInDate}
+                  value={customer.booking_date}
                   onChange={handleInputChange}
                 />
               </Col>
               <Col md="6">
-                <Label>Check in Date</Label>
+                <Label>Check in Time</Label>
                 <Input
                   type="time"
-                  name="checkInTime"
+                  name="assign_time"
                   className="mb-3"
-                  value={customer.checkInTime}
+                  value={customer.assign_time}
+                  onChange={handleInputChange}
+                />
+              </Col>
+              <Col md="6">
+                <Label>Check Out Date</Label>
+                <Input
+                  type="date"
+                  name="to_booking_date"
+                  className="mb-3"
+                  value={customer.to_booking_date}
+                  onChange={handleInputChange}
+                />
+              </Col>
+              <Col md="6">
+                <Label>Check Out Time</Label>
+                <Input
+                  type="time"
+                  name="to_assign_time"
+                  className="mb-3"
+                  value={customer.to_assign_time}
                   onChange={handleInputChange}
                 />
               </Col>
@@ -470,7 +441,7 @@ const HotelDashboard3 = ({
                   // updateRoomSelection();
                 }}
               >
-                Confirm Check-in
+                Confirm Reservation
               </Button>
             )}
           </Card>
@@ -480,12 +451,10 @@ const HotelDashboard3 = ({
   );
 };
 
-HotelDashboard3.propTypes = {
-  sessionId: PropTypes.string.isRequired,
-  actionType: PropTypes.string.isRequired,
-  bookingCartId: PropTypes.number.isRequired,
-  selectedRooms: PropTypes.array.isRequired, // Change from object to array
-  // setSelectedRooms: PropTypes.func.isRequired,
-};
+// Updated PropTypes
+// Reservation.propTypes = {
+//   // bookingCartId: PropTypes.string.isRequired,
+//   // roomData: PropTypes.array.isRequired, // Fix: Change from string to array
+// };
 
-export default HotelDashboard3;
+export default Reservation;

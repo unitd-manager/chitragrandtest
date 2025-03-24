@@ -6,7 +6,7 @@ import api from "../../../constants/api";
 import HotelDashboard3 from "./Hotel5"; // Import the HotelDashboard3 component here
 
 
-const HotelDashboard2 = ({ sessionId, actionType, bookingCartId }) => {
+const Cleaning = ({ sessionId, actionType, bookingCartId }) => {
   const [roomData, setRoomData] = useState({});
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedRooms, setSelectedRooms] = useState([]); // Store selected room IDs
@@ -65,90 +65,97 @@ const HotelDashboard2 = ({ sessionId, actionType, bookingCartId }) => {
 
   const updateRoomSelection = () => {
     if (!sessionId || !actionType || !bookingCartId) {
-      alert('Missing session ID, action type, or booking cart ID.');
+      alert("Missing session ID, action type, or booking cart ID.");
       return;
     }
-
+  
     if (!selectedRooms || selectedRooms.length === 0) {
-      alert('No rooms selected.');
+      alert("No rooms selected.");
       return;
     }
-
+  
     const requestData = {
       sessionId,
       actionType,
       bookingCartId,
       rooms: selectedRooms.map(({ roomhistoryId }) => ({
         roomhistoryId,
-        isAvailable: 'No',
+        isAvailable: "No",
       })),
     };
-
-    console.log('📌 Sending API Request:', JSON.stringify(requestData, null, 2));
-
+  
+    console.log("📌 Sending API Request:", JSON.stringify(requestData, null, 2));
+  
     api
-      .post('/bookingcart/update-room-booking-cart', requestData)
-      .then((res) => {
-        console.log('API Response:', res.data); // Log the response
-
-        // Check if res.data is an array
-        if (Array.isArray(res.data)) {
-          res.data.forEach((item) => {
-            console.log(item); // Process each item
-          });
-        } else if (res.data && res.data.rooms && Array.isArray(res.data.rooms)) {
-          // If res.data has rooms and it's an array, loop through it
-          res.data.rooms.forEach((room) => {
-            console.log(room); // Process each room
-          });
-        } else if (res.data && typeof res.data === 'object') {
-          // If res.data is an object but not an array, use Object.keys(), Object.values(), or Object.entries()
-          // Example using Object.keys():
-          Object.keys(res.data).forEach((key) => {
-            console.log(key, res.data[key]); // Iterate over each key-value pair
-          });
-
-          // Or Example using Object.values():
-          Object.values(res.data).forEach((value) => {
-            console.log(value); // Iterate over each value
-          });
-
-          // Or Example using Object.entries():
-          Object.entries(res.data).forEach(([key, value]) => {
-            console.log(key, value); // Iterate over each key-value pair
-          });
-        } else {
-          console.error('Data is not iterable:', res.data);
-        }
-
-        // Handling success or failure
-        if (res.data.success) {
-          alert('✅ Rooms updated successfully!');
-          // setSelectedRooms([]); // Clear selection
-          // Set the flag to true
-        } else {
-          throw new Error(res.data.message || 'Unknown error');
-        }
-      })
-      .catch((err) => {
-        console.error('🚨 API Error:', err.response?.data || err.message);
-        alert('⚠ Failed to update rooms. Please try again.');
-      });
+    .post("/bookingcart/update-room-selection", requestData)
+    .then((res) => {
+      console.log("API Response:", res.data); // Log the response
+  
+      // Check if res.data is an array
+      if (Array.isArray(res.data)) {
+        res.data.forEach(item => {
+          console.log(item); // Process each item
+        });
+      } else if (res.data && res.data.rooms && Array.isArray(res.data.rooms)) {
+        // If res.data has rooms and it's an array, loop through it
+        res.data.rooms.forEach(room => {
+          console.log(room); // Process each room
+        });
+      } else if (res.data && typeof res.data === 'object') {
+        // If res.data is an object but not an array, use Object.keys(), Object.values(), or Object.entries()
+        // Example using Object.keys():
+        Object.keys(res.data).forEach(key => {
+          console.log(key, res.data[key]); // Iterate over each key-value pair
+        });
+  
+        // Or Example using Object.values():
+        Object.values(res.data).forEach(value => {
+          console.log(value); // Iterate over each value
+        });
+  
+        // Or Example using Object.entries():
+        Object.entries(res.data).forEach(([key, value]) => {
+          console.log(key, value); // Iterate over each key-value pair
+        });
+      } else {
+        console.error("Data is not iterable:", res.data);
+      }
+  
+      // Handling success or failure
+      if (res.data.success) {
+        alert("✅ Rooms updated successfully!");
+        setSelectedRooms([]); // Clear selection
+        setIsRoomUpdated(true); // Set the flag to true
+      } else {
+        throw new Error(res.data.message || "Unknown error");
+      }
+    })
+    .catch((err) => {
+      console.error("🚨 API Error:", err.response?.data || err.message);
+      alert("⚠ Failed to update rooms. Please try again.");
+    });
+  
+  
   };
+  
+  // Ensure function is defined before calling it
+  if (typeof updateRoomSelection !== "function") {
+    console.error("updateRoomSelection is not defined.");
+  }
   
   if (isRoomUpdated) {
     // Once rooms are updated, show HotelDashboard3
-    return <HotelDashboard3 bookingCartId={bookingCartId} selectedRooms={selectedRooms}setSelectedRooms={setSelectedRooms}sessionId={sessionId}actionType={actionType} />;
+    return <HotelDashboard3 bookingCartId={bookingCartId} />;
   }
 
   return (
     <Container className="mt-4">
-   
-   <h2 
+<h2 
   className="mb-4 text-center fw-bold text-uppercase p-3 bg-primary text-white rounded shadow-sm"
 >
-  <i className="fas fa-door-open me-2"></i> Room Availability
+<i className="fas fa-broom me-2"></i> Cleaning
 </h2>
+
       <Row className="justify-content-center">
         <Col md="8">
           <Nav tabs className="d-flex justify-content-center mb-3">
@@ -175,54 +182,6 @@ const HotelDashboard2 = ({ sessionId, actionType, bookingCartId }) => {
         </Col>
       </Row>
 
-      {/* <Row className="justify-content-center">
-        {selectedCategory && roomData[selectedCategory] ? (
-          <>
-            {roomData[selectedCategory].available.map((room) => (
-              <Col key={room.roomNumber} xs="4" sm="3" md="2" className="mb-3">
-                <Card
-                  onClick={() => toggleRoomSelection(room)}
-                  style={{
-                    backgroundColor: selectedRooms.some((r) => r.roomNumber === room.roomNumber) ? "#ffc107" : "#28a745",
-                    color: "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  <CardBody className="text-center p-3">{room.roomNumber}</CardBody>
-                </Card>
-              </Col>
-            ))}
-
-            {roomData[selectedCategory].booked.map((room) => (
-              <Col key={room.roomNumber} xs="4" sm="3" md="2" className="mb-3">
-                <Card style={{ backgroundColor: "#dc3545", color: "#fff" }}>
-                  <CardBody className="text-center p-3">{room.roomNumber}</CardBody>
-                </Card>
-              </Col>
-            ))}
-          </>
-        ) : (
-          <Col className="text-center">
-            <p>No rooms available for this category.</p>
-          </Col>
-        )}
-      </Row>
-
-      <Row className="justify-content-center mt-3">
-      <Button 
-  className="btn btn-primary" 
-  onClick={() => {
-    updateRoomSelection();
-    setIsRoomUpdated(true);
-  }}
->
-  Confirm Booking
-</Button>
-
-
-
-
-      </Row> */}
       <Row className="justify-content-center">
         {selectedCategory && roomData[selectedCategory] ? (
           <>
@@ -266,24 +225,19 @@ const HotelDashboard2 = ({ sessionId, actionType, bookingCartId }) => {
 
      
       <div className="text-center mt-3">
-      <Button 
-  className="btn btn-primary" 
-  onClick={() => {
-    updateRoomSelection();
-    setIsRoomUpdated(true);
-  }}
->
-  Confirm Booking
-</Button>
+  <Button className="btn btn-primary" onClick={updateRoomSelection}>
+    Confirm Cleaning
+  </Button>
 </div>
+      
     </Container>
   );
 };
 
-HotelDashboard2.propTypes = {
+Cleaning.propTypes = {
   sessionId: PropTypes.string.isRequired,
   actionType: PropTypes.string.isRequired,
   bookingCartId: PropTypes.number.isRequired,
 };
 
-export default HotelDashboard2;
+export default Cleaning;
