@@ -2,22 +2,66 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Button, Container, Row, Col, Card, Table, Input, Label } from 'reactstrap';
 import Select from 'react-select';
+import moment from 'moment';
 import api from '../../../constants/api';
 import TenderContactDetails from '../../TenderTable/TenderContactDetails';
+import ReservationModal from '../../TenderTable/ReservationModel';
 
 const HotelDashboard3 = ({
   bookingCartId,
   sessionId,
   selectedRooms,
   // setSelectedRooms,
+  getRoomDetails,
   actionType,
+  getRoomsByUpdate,
+  roomDetails,
+  getcartHistory,
 }) => {
-  const [roomDetails, setRoomDetails] = useState([]);
   const [bookingId, setBookingId] = useState(null);
   const [contactIds, setContactId] = useState('');
+  const [allCountries, setallCountries] = useState();
+  const [customerReservation, setCustomerReservation] = useState('');
+  const [cartAmount, setCartAmount] = useState({
+    booking_cart_history_id: null,
+    amount: null,
+  });
 
-  console.log('selectedRooms', selectedRooms);
-  console.log('roomDetails', roomDetails);
+  const [isSaving, setIsSaving] = useState(false);
+
+ 
+  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
+  const [selectedReservation, setSelectedReservation] = useState(null); // Selected reservation data
+
+  const toggleModal = () => setIsModalOpen(!isModalOpen);
+
+  // Function to handle reservation confirmation
+  const confirmReservation = (formData) => {
+    console.log('Reservation Confirmed:', formData);
+    toggleModal();
+  };
+
+  // const getCurrentDate = () => {
+  //   const today = new Date();
+  //   return today.toISOString().split('T')[0]; // Extracts YYYY-MM-DD
+  // };
+
+  // const getCurrentTime = () => {
+  //   const now = new Date();
+  //   return now.toTimeString().slice(0, 5); // Extracts HH:MM
+  // };
+  // const getCurrentDate = () => {
+  //   return new Date().toISOString().split("T")[0]; // Returns YYYY-MM-DD
+  // };
+
+  // const getCurrentTime = () => {
+  //   const now = new Date();
+  //   return now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0"); // Returns HH:MM
+  // };
+
+  const currentDate = moment().format('YYYY-MM-DD');
+  const currentTime = moment().format('HH:mm:ss');
+
   const [customer, setCustomer] = useState({
     name: '',
     address: '',
@@ -31,7 +75,7 @@ const HotelDashboard3 = ({
     address_po_code: '',
     checkInTime: '',
     checkInDate: '',
-    contact_id:'',
+    contact_id: '',
     confirmed: false,
   });
 
@@ -95,6 +139,7 @@ const HotelDashboard3 = ({
 
         // Handling success or failure
         if (res.data.success) {
+          getRoomDetails();
           alert('✅ Rooms updated successfully!');
           // setSelectedRooms([]); // Clear selection
           // Set the flag to true
@@ -114,40 +159,27 @@ const HotelDashboard3 = ({
   }
 
   // Fetch room details based on bookingCartId
-  useEffect(() => {
-    if (bookingCartId) {
-      api
-        .post('/bookingcart/get-room-details', { booking_cart_id: bookingCartId })
-        .then((res) => {
-          if (Array.isArray(res.data.data)) {
-            setRoomDetails(res.data.data);
-          } else if (res.data.data) {
-            setRoomDetails([res.data.data]);
-          } else {
-            setRoomDetails([]);
-            console.error('Unexpected response format:', res.data);
-          }
-        })
-        .catch((err) => {
-          console.error('Error fetching room details:', err);
-          setRoomDetails([]);
-        });
-    }
-  }, [bookingCartId]);
+  console.log('bookingCartId', bookingCartId);
 
   // Handle input change
   const handleInputChange = (e) => {
     setCustomer({ ...customer, [e.target.name]: e.target.value });
   };
 
+  const handleInputChangeAmount = (e, room) => {
+    setCartAmount({
+      booking_cart_history_id: room.booking_cart_history_id,
+      amount: e.target.value,
+    });
+  };
+
   // Confirm Check-in
   const confirmCheckin = () => {
     if (
-      !bookingCartId ||
-      !customer.mobile ||
-      !customer.address_flat ||
-      !customer.checkInTime ||
-      !customer.checkInDate 
+      // !bookingCartId ||
+      !customer.first_name ||
+      !customer.phone_direct ||
+      !customer.address_flat
     ) {
       alert('Please fill in all required fields.');
       return;
@@ -165,10 +197,12 @@ const HotelDashboard3 = ({
         address_flat: customer.address_flat,
         address_state: customer.address_state,
         gst_no: customer.gst_no,
+        amount: customer.amount,
         address_po_code: customer.address_po_code,
-        check_in_time: customer.checkInTime,
-        check_in_date: customer.checkInDate,
-        contact_id:contactIds
+        check_in_time: currentTime,
+        check_in_date: currentDate,
+        contact_id: contactIds,
+        room_change_status:"Active"
       })
       .then((res) => {
         console.log('Check-in Response:', res.data);
@@ -176,6 +210,7 @@ const HotelDashboard3 = ({
           setBookingId(res.data.booking_id);
           setCustomer((prev) => ({ ...prev, confirmed: true }));
           updateRoomSelection();
+          getRoomsByUpdate();
         }
       })
       .catch((err) => {
@@ -188,6 +223,7 @@ const HotelDashboard3 = ({
       .post('/contact/getContactById', { contact_id: contactId })
       .then((res) => {
         setCustomer(res.data.data[0]);
+        setCustomerReservation(res.data.data[0]);
       })
       .catch(() => {});
   };
@@ -217,27 +253,27 @@ const HotelDashboard3 = ({
 
   const AddNewContact = () => {
     const newDataWithCompanyId = newContactData;
-    // newDataWithCompanyId.company_id = selectedCompany;
+  
     if (newDataWithCompanyId.first_name.trim() === '') {
       alert('Please fill Name field', 'warning');
       return;
     }
-
+  
     if (!newDataWithCompanyId.phone_direct || newDataWithCompanyId.phone_direct.trim() === '') {
       alert('Please fill Phone Direct field', 'warning');
       return;
     }
-
+  
     if (!newDataWithCompanyId.address_flat || newDataWithCompanyId.address_flat.trim() === '') {
       alert('Please fill Address field', 'warning');
       return;
     }
-
+  
     if (!newDataWithCompanyId.address_state || newDataWithCompanyId.address_state.trim() === '') {
       alert('Please fill Address State field', 'warning');
       return;
     }
-
+  
     if (
       !newDataWithCompanyId.address_po_code ||
       newDataWithCompanyId.address_po_code.trim() === ''
@@ -245,17 +281,41 @@ const HotelDashboard3 = ({
       alert('Please fill Postal Code field', 'warning');
       return;
     }
+  
+    // Check for duplicate
     api
+    .post('/contact/CheckContactEmailPhone', {
+      first_name: newDataWithCompanyId.first_name,
+      phone_direct: newDataWithCompanyId.phone_direct,
+    })
+    .then((res) => {
+      const duplicateData = res.data.data;
+      
+  
+      console.log('Duplicate check result:', res.data);
+  
+      if (Array.isArray(duplicateData) && duplicateData.length > 0) {
+        // 👇 Show alert if duplicate found
+        alert('Contact with same name and phone already exists!', 'warning');
+      }
+    })
+    .catch(() => {
+      api
       .post('/contact/insertContact', newDataWithCompanyId)
-      .then(() => {
-        // getContact(newDataWithCompanyId.company_id);
+      .then((res1) => {
         alert('Contact Inserted Successfully', 'success');
-        window.location.reload();
+        const insertedDataId = res1.data.data.insertId;
+        getContactById(insertedDataId);
+        addContactToggle();
       })
       .catch(() => {
-        alert('Unable to add Contact! try again later', 'error');
+        alert('Unable to add Contact! Try again later.', 'error');
       });
+    });
+  
   };
+  
+  
   const [company, setCompany] = useState();
 
   const getCompany = () => {
@@ -266,13 +326,22 @@ const HotelDashboard3 = ({
       })
       .catch(() => {});
   };
+  const getAllCountries = () => {
+    api
+      .get('/clients/getCountry')
+      .then((res) => {
+        setallCountries(res.data.data);
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     getCompany();
+    getAllCountries();
   }, []);
   const options = company?.map((e) => ({
     value: e.contact_id,
-    label: `${e.first_name} (${e.mobile})`,
+    label: `${e.first_name} (${e.phone_direct})`,
   }));
 
   useEffect(() => {
@@ -280,75 +349,196 @@ const HotelDashboard3 = ({
       getContactById(customer.contact_id);
     }
   }, [customer.contact_id]);
+  const BackTolist = () => {
+    window.location.reload();
+  };
+
+  const handleSave = () => {
+    setIsSaving(true); // Start loader
+  
+    api
+      .post('/bookingcart/editBookingCartHistoryAmount', cartAmount)
+      .then(() => {
+        getcartHistory();
+      })
+      .catch((err) => {
+        console.error('Error saving amount:', err);
+      })
+      .finally(() => {
+        setIsSaving(false); // Stop loader
+      });
+  };
+  
 
   return (
     <Container className="mt-4">
       <Row>
-        <Col md="6">
-          <Card className="shadow p-3 h-100">
-            <h5 className="mb-3 text-center">Room Availability</h5>
-            <Table bordered className="text-center">
-              <thead style={{ backgroundColor: '#87CEFA', color: 'red' }}>
-                <tr>
-                  <th>Room Type</th>
-                  <th>Room Numbers</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedRooms?.map((room) => (
-                  <tr key={room?.roomId}>
-                    <td className="fw-bold">{room?.roomType}</td> {/* Correct property name */}
-                    <td>{room?.roomNumber}</td> {/* Correct property name */}
+        {bookingId && (
+          <Col md="12">
+            {bookingId && (
+              <Card className="shadow p-3 mt-3 text-center">
+                <h5 className="text-success fw-bold">✅ Check-in Confirmed!</h5>
+                <p>Booking ID: {bookingId}</p>
+                <Button
+                  onClick={BackTolist}
+                  style={{
+                    display: 'flex', // To enable flexbox layout
+                    justifyContent: 'center', // Horizontally center
+                    alignItems: 'center', // Vertically center
+                    margin: '0 auto', // Optionally, you can use margin auto for better centering
+                  }}
+                >
+                  Back to Check In
+                </Button>
+              </Card>
+            )}
+            <Card className="shadow p-3 h-100">
+              <h5 className="mb-3 text-center">Room Confirm</h5>
+              <Table bordered className="text-center">
+                <thead style={{ backgroundColor: '#87CEFA', color: 'red' }}>
+                  <tr>
+                    <th>Room Type</th>
+                    <th>Room Numbers</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Card>
-
-          {customer.confirmed && (
-            <Card className="shadow p-3 mt-3 text-center">
-              <h5 className="text-success fw-bold">✅ Check-in Confirmed!</h5>
-              <p>Booking ID: {bookingId}</p>
+                </thead>
+                <tbody>
+                  {selectedRooms?.map((room) => (
+                    <tr key={room?.roomId}>
+                      <td className="fw-bold">{room?.roomType}</td> {/* Correct property name */}
+                      <td>{room?.roomNumber}</td> {/* Correct property name */}
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+              {/* <Button color="primary" onClick={() => { setSelectedReservation({ booking_date: moment().format('YYYY-MM-DD'), delux: 2 }); toggleModal(); }}>
+              Reservation
+            </Button> */}
             </Card>
-          )}
-        </Col>
+          </Col>
+        )}
+        {!bookingId && (
+          <Col md="6">
+            <Card className="shadow p-3 h-100" style={{ marginBottom: '250px' }}>
+              <h5 className="mb-3 text-center">Room Availability</h5>
+              <Table bordered className="text-center">
+                <thead style={{ backgroundColor: '#87CEFA', color: 'red' }}>
+                  <tr>
+                    <th>Room Type</th>
+                    <th>Room Numbers</th>
+                    <th>Room Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roomDetails?.map((room) => (
+                    <tr key={room?.booking_cart_history_id}>
+                      <td className="fw-bold">{room?.room_type}</td>
+                      <td>{room?.room_number}</td>
+                      <td>
+                        <Input
+                          // type="number"
+                          name="amount"
+                          className="mb-3"
+                          type="text"
+                          defaultValue={room?.amount}
+                          onChange={(e) => handleInputChangeAmount(e, room)}
+                        />
+                      </td>
+                      <td>
+  <Button color="primary" size="sm" onClick={handleSave} disabled={isSaving}>
+    {isSaving ? (
+      <>
+        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        Saving...
+      </>
+    ) : (
+      'Save'
+    )}
+  </Button>
+</td>
 
-        <Col md="6">
-          <Card className="shadow p-3 h-100">
-            <h5 className="mb-3 text-center">Customer Details</h5>
-            <Row>
-              <Col md="12">
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+              {/* <Button
+                color="primary"
+                onClick={() => {
+                  setSelectedReservation({ booking_date: moment().format('YYYY-MM-DD'), delux: 2 });
+                  toggleModal();
+                }}
+              >
+                Reservation
+              </Button> */}
+            </Card>
+
+            {customer.confirmed && (
+              <Card className="shadow p-3 mt-3 text-center">
+                <h5 className="text-success fw-bold">✅ Check-in Confirmed!</h5>
+                <p>Booking ID: {bookingId}</p>
+              </Card>
+            )}
+          </Col>
+        )}
+        {!bookingId && (
+          <Col md="6">
+            <Card className="shadow p-3 h-100">
+              <h5 className="mb-3 text-center">Customer Details</h5>
+              <Row>
+                <Col md="12">
                 <Label>
-                  Customer Name (OR){' '}
-                  <span className="anchor" onClick={addContactToggle}>
-                    <b>
-                      <u>Add New</u>
-                    </b>
-                  </span>
-                </Label>
+  Customer Name (OR){' '}
+  <span className="anchor" onClick={addContactToggle}>
+    <b><u>Add New</u></b>
+  </span>
+  {contactIds && (
+    <>
+      {' '} (AND){' '}
+      <span
+        className="anchor"
+        onClick={() => {
+          setSelectedReservation({
+            booking_date: moment().format('YYYY-MM-DD'),
+          });
+          getContactById(customer.contact_id);
+          toggleModal();
+        }}
+      >
+        <b><u style={{ color: 'green' }}>Already Reserved</u></b>
+      </span>
+    </>
+  )}
+</Label>
 
-                <Select
-  className="mb-2"
-  options={options}
-  placeholder="Select or search customer..."
-  onChange={(selectedOption) => {
-    setContactId(selectedOption.value); // Debugging log
-    setCustomer((prev) => ({ ...prev, contact_id: selectedOption?.value })); // Store contact_id
-  }}
-  isSearchable
-/>
+                  <Select
+                    className="mb-2"
+                    options={options}
+                    placeholder="Select or search customer..."
+                    onChange={(selectedOption) => {
+                      setContactId(selectedOption.value); // Debugging log
+                      setCustomer((prev) => ({ ...prev, contact_id: selectedOption?.value })); // Store contact_id
+                    }}
+                    isSearchable
+                  />
 
-                <TenderContactDetails
-                  addContactModal={addContactModal}
-                  addContactToggle={addContactToggle}
-                  AddNewContact={AddNewContact}
-                  handleAddNewContact={handleAddNewContact}
-                  newContactData={newContactData}
-                />
-              </Col>
-            </Row>
-            <Input type="text" name="first_name" placeholder="Full Name" className="mb-2" value={customer.first_name} onChange={handleInputChange} />
-            {/* <Input
+                  <TenderContactDetails
+                    addContactModal={addContactModal}
+                    addContactToggle={addContactToggle}
+                    AddNewContact={AddNewContact}
+                    handleAddNewContact={handleAddNewContact}
+                    newContactData={newContactData}
+                    allCountries={allCountries}
+                  />
+                </Col>
+              </Row>
+              <Input
+                type="text"
+                name="first_name"
+                placeholder="Full Name"
+                className="mb-2"
+                value={customer.first_name}
+                onChange={handleInputChange}
+              />
+              {/* <Input
               type="textarea"
               name="address"
               placeholder="Address"
@@ -356,126 +546,149 @@ const HotelDashboard3 = ({
               value={customer.address}
               onChange={handleInputChange}
             /> */}
-            <Input
-              type="textarea"
-              name="address_flat"
-              placeholder="Area"
-              className="mb-2"
-              value={customer.address_flat}
-              onChange={handleInputChange}
-            />
-            <Row>
-              <Col md="6">
-                <Input
-                  type="text"
-                  name="phone"
-                  placeholder="Phone Number"
-                  className="mb-2"
-                  value={customer.mobile}
-                  onChange={handleInputChange}
-                />
-              </Col>
-              <Col md="6">
-                <Input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  className="mb-2"
-                  value={customer.email}
-                  onChange={handleInputChange}
-                />
-              </Col>
-            </Row>
+              <Input
+                type="textarea"
+                name="address_flat"
+                placeholder="Area"
+                className="mb-2"
+                value={customer.address_flat}
+                onChange={handleInputChange}
+              />
+              <Row>
+                <Col md="6">
+                  <Input
+                    type="text"
+                    name="mobile"
+                    placeholder="Phone Number"
+                    className="mb-2"
+                    value={customer.phone_direct}
+                    onChange={handleInputChange}
+                  />
+                </Col>
+                <Col md="6">
+                  <Input
+                    type="email"
+                    name="email"
+                    placeholder="Email"
+                    className="mb-2"
+                    value={customer.email}
+                    onChange={handleInputChange}
+                  />
+                </Col>
+              </Row>
 
-            <Row>
-              <Col md="6">
-                <Input
-                  type="text"
-                  name="city"
-                  placeholder="City"
-                  className="mb-2"
-                  value={customer.city}
-                  onChange={handleInputChange}
-                />
-              </Col>
-              <Col md="6">
-                <Input
-                  type="text"
-                  name="address_state"
-                  placeholder="State"
-                  className="mb-2"
-                  value={customer.address_state}
-                  onChange={handleInputChange}
-                />
-              </Col>
-              <Col md="6">
-                <Input
-                  type="text"
-                  name="address_country"
-                  placeholder="Country"
-                  className="mb-2"
-                  value={customer.address_country}
-                  onChange={handleInputChange}
-                />
-              </Col>
-              <Col md="6">
-                <Input
-                  type="text"
-                  name="address_po_code"
-                  placeholder="Po Code"
-                  className="mb-2"
-                  value={customer.address_po_code}
-                  onChange={handleInputChange}
-                />
-              </Col>
-              <Col md="12">
-                <Input
-                  type="text"
-                  name="gst_no"
-                  placeholder="Gst No"
-                  className="mb-2"
-                  value={customer.gst_no}
-                  onChange={handleInputChange}
-                />
-              </Col>
-              <Col md="6">
-                <Label>Check in Date</Label>
-                <Input
-                  type="date"
-                  name="checkInDate"
-                  className="mb-3"
-                  value={customer.checkInDate}
-                  onChange={handleInputChange}
-                />
-              </Col>
-              <Col md="6">
-                <Label>Check in Date</Label>
-                <Input
-                  type="time"
-                  name="checkInTime"
-                  className="mb-3"
-                  value={customer.checkInTime}
-                  onChange={handleInputChange}
-                />
-              </Col>
-            </Row>
+              <Row>
+                <Col md="6">
+                  <Input
+                    type="text"
+                    name="city"
+                    placeholder="City"
+                    className="mb-2"
+                    value={customer.city}
+                    onChange={handleInputChange}
+                  />
+                </Col>
+                <Col md="6">
+                  <Input
+                    type="text"
+                    name="address_state"
+                    placeholder="State"
+                    className="mb-2"
+                    value={customer.address_state}
+                    onChange={handleInputChange}
+                  />
+                </Col>
+                <Col md="6">
+                  <Input
+                    type="text"
+                    name="address_country"
+                    placeholder="Country"
+                    className="mb-2"
+                    value={customer.address_country}
+                    onChange={handleInputChange}
+                  />
+                </Col>
+                <Col md="6">
+                  <Input
+                    type="text"
+                    name="address_po_code"
+                    placeholder="Po Code"
+                    className="mb-2"
+                    value={customer.address_po_code}
+                    onChange={handleInputChange}
+                  />
+                </Col>
+                <Col md="6">
+                  <Input
+                    type="text"
+                    name="gst_no"
+                    placeholder="Gst No"
+                    className="mb-2"
+                    value={customer.gst_no}
+                    onChange={handleInputChange}
+                  />
+                </Col>
+                <Col md="6">
+                  <Input
+                    type="text"
+                    name="amount"
+                    placeholder="Advance Amount"
+                    className="mb-2"
+                    value={customer.amount}
+                    onChange={handleInputChange}
+                  />
+                </Col>
+                <Col md="6">
+                  <Label>Check in Date</Label>
+                  <Input
+                    type="date"
+                    min={new Date().toISOString().split("T")[0]}
+                    name="checkInDate"
+                    className="mb-3"
+                    value={currentDate}
+                    onChange={handleInputChange}
+                    disabled
+                  />
+                </Col>
+                <Col md="6">
+                  <Label>Check in Time</Label>
+                  <Input
+                    type="time"
+                    name="checkInTime"
+                    className="mb-3"
+                    value={currentTime}
+                    onChange={handleInputChange}
+                    disabled
+                  />
+                </Col>
+              </Row>
 
-            {/* <Input type="time" name="checkInTime" className="mb-3" value={customer.checkInTime} onChange={handleInputChange} /> */}
-            {!bookingId && (
-              <Button
-                style={{ backgroundColor: '#87CEFA', borderColor: '#87CEFA', color: 'red' }}
-                className="w-100"
-                onClick={() => {
-                  confirmCheckin();
-                  // updateRoomSelection();
-                }}
-              >
-                Confirm Check-in
-              </Button>
-            )}
-          </Card>
-        </Col>
+              {/* <Input type="time" name="checkInTime" className="mb-3" value={customer.checkInTime} onChange={handleInputChange} /> */}
+              {!bookingId && (
+                <Button
+                  style={{ backgroundColor: '#87CEFA', borderColor: '#87CEFA', color: 'red' }}
+                  className="w-100"
+                  onClick={() => {
+                    confirmCheckin();
+                    // updateRoomSelection();
+                  }}
+                >
+                  Confirm Check-in
+                </Button>
+              )}
+            </Card>
+          </Col>
+        )}
       </Row>
+      {selectedReservation && (
+        <ReservationModal
+          reservationData={selectedReservation}
+          isOpen={isModalOpen}
+          customerReservation={customerReservation}
+          toggle={toggleModal}
+          confirmReservation={confirmReservation}
+        />
+      )}
     </Container>
   );
 };
@@ -485,7 +698,10 @@ HotelDashboard3.propTypes = {
   actionType: PropTypes.string.isRequired,
   bookingCartId: PropTypes.number.isRequired,
   selectedRooms: PropTypes.array.isRequired, // Change from object to array
-  // setSelectedRooms: PropTypes.func.isRequired,
+  getRoomDetails: PropTypes.func.isRequired,
+  getRoomsByUpdate: PropTypes.func.isRequired,
+  roomDetails: PropTypes.array.isRequired,
+  getcartHistory: PropTypes.func.isRequired,
 };
 
 export default HotelDashboard3;

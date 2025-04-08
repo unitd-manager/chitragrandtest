@@ -19,21 +19,25 @@ const HotelDashboard = () => {
   const [sessionId, setSessionId] = useState(null);
   const [actionType, setActionType] = useState(null);
   const [bookingCartId, setBookingCartId] = useState(null);
+  const getRoomDetails = () => {
+    api
+    .get("/booking/getRoomDetails")
+    .then((res) => {
+      setRoomData(res.data.data);
+    })
+    .catch((err) => {
+      console.error("Error fetching data:", err);
+    });
+  }
 
   useEffect(() => {
-    api
-      .get("/booking/getRoomDetails")
-      .then((res) => {
-        setRoomData(res.data.data);
-      })
-      .catch((err) => {
-        console.error("Error fetching data:", err);
-      });
+    getRoomDetails()
   }, []);
 
   // Function to handle Check-In
   const handleCheckIn = () => {
     const newSessionId = uuidv4();
+    console.log('newSessionId',newSessionId)
 
     const bookingData = {
       sessionId: newSessionId,
@@ -41,7 +45,7 @@ const HotelDashboard = () => {
     };
 
     api
-      .post("/bookingcart/addToCart", bookingData)
+      .post("/bookingcart/addToCart1", bookingData)
       .then((res) => {
         if (res.data.success) {
           // alert(`Check-In Successful! Booking Cart ID: ${res.data.booking_cart_id}`);
@@ -76,7 +80,7 @@ const HotelDashboard = () => {
       <Card className="shadow-lg border-0 rounded-4 bg-dark text-white p-4">
   <CardBody className="text-center">
     <h1 className="mb-3 fw-bold text-uppercase" style={{ fontFamily: "Georgia, serif", letterSpacing: "2px" }}>
-      ✨ Welcome To <span style={{ color: "#FFD700" }}>Grand Chitra Hotel</span> ✨
+      ✨ Welcome To <span style={{ color: "#FFD700" }}>Chitra Grand Hotel</span> ✨
     </h1>
   </CardBody>
 </Card>
@@ -172,12 +176,12 @@ const HotelDashboard = () => {
       </Card>
       {/* Display Active Component After Reload */}
       {activeComponent === "Hotel4" && sessionId && bookingCartId && (
-        <Hotel4 sessionId={sessionId} actionType={actionType} bookingCartId={bookingCartId} />
+        <Hotel4 sessionId={sessionId} actionType={actionType} bookingCartId={bookingCartId}getRoomDetails={getRoomDetails} activeComponent={activeComponent}/>
       )}
-      {activeComponent === "CheckOut" && <CheckOut roomData={roomData} />}
-      {activeComponent === "Cleaning" && <Cleaning />}
+      {activeComponent === "CheckOut" && <CheckOut roomData={roomData} getRoomDetails={getRoomDetails} />}
+      {activeComponent === "Cleaning" && <Cleaning getRoomDetails={getRoomDetails} /> }
       {activeComponent === "Reservation" && <Reservation roomData={roomData} />}
-      {activeComponent === "Update" && <Update roomData={roomData} />}
+      {activeComponent === "Update" && <Update roomData={roomData} getRoomDetails={getRoomDetails}/>}
     </Container>
   );
 };

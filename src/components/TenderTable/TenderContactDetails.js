@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
   Col,
@@ -13,8 +13,9 @@ import {
   Input,
   Card,
   CardBody,
-  Row
+  Row,
 } from 'reactstrap';
+import api from '../../constants/api';
 
 export default function TenderContactDetails({
   handleAddNewContact,
@@ -22,6 +23,7 @@ export default function TenderContactDetails({
   addContactToggle,
   AddNewContact,
   newContactData,
+  allCountries,
 }) {
   TenderContactDetails.propTypes = {
     handleAddNewContact: PropTypes.any,
@@ -29,7 +31,76 @@ export default function TenderContactDetails({
     addContactToggle: PropTypes.any,
     AddNewContact: PropTypes.any,
     newContactData: PropTypes.any,
+    allCountries: PropTypes.any,
   };
+
+  const [isPhoneDuplicate, setIsPhoneDuplicate] = useState(false);
+  const [phoneChecked, setPhoneChecked] = useState(false);
+
+  const handlePhoneCheck = async (e) => {
+    const { value } = e.target;
+    handleAddNewContact(e); // still update the data as usual
+
+    if (value?.trim()) {
+      try {
+        const res = await api.post('/contact/CheckContactPhone', {
+          phone_direct: value.trim(),
+        });
+        const result = res.data.data;
+        if (Array.isArray(result) && result.length > 0) {
+          setIsPhoneDuplicate(true);
+        } else {
+          setIsPhoneDuplicate(false);
+        }
+        setPhoneChecked(true);
+      } catch (err) {
+        console.error('Phone check failed', err);
+        setIsPhoneDuplicate(false);
+      }
+    } else {
+      setIsPhoneDuplicate(false);
+      setPhoneChecked(false);
+    }
+  };
+
+  const indiaStates = [
+    'Andhra Pradesh',
+    'Arunachal Pradesh',
+    'Assam',
+    'Bihar',
+    'Chhattisgarh',
+    'Goa',
+    'Gujarat',
+    'Haryana',
+    'Himachal Pradesh',
+    'Jharkhand',
+    'Karnataka',
+    'Kerala',
+    'Madhya Pradesh',
+    'Maharashtra',
+    'Manipur',
+    'Meghalaya',
+    'Mizoram',
+    'Nagaland',
+    'Odisha',
+    'Punjab',
+    'Rajasthan',
+    'Sikkim',
+    'Tamil Nadu',
+    'Telangana',
+    'Tripura',
+    'Uttar Pradesh',
+    'Uttarakhand',
+    'West Bengal',
+  ];
+
+  const [selectedCountry, setSelectedCountry] = useState('India');
+
+  useEffect(() => {
+    if (selectedCountry !== 'India') {
+      handleAddNewContact({ target: { name: 'address_state', value: '' } });
+    }
+  }, [selectedCountry]);
 
   return (
     <div>
@@ -62,41 +133,72 @@ export default function TenderContactDetails({
                           <Label>
                             Name<span className="required"> *</span>
                           </Label>
-                          <Input type="text" name="first_name" value={newContactData && newContactData.first_name} onChange={handleAddNewContact} />
+                          <Input
+                            type="text"
+                            name="first_name"
+                            value={newContactData && newContactData.first_name}
+                            onChange={handleAddNewContact}
+                          />
                         </FormGroup>
                       </Col>
                       <Col md="4">
                         <FormGroup>
                           <Label>Email</Label>
-                          <Input type="text" name="email"  value={newContactData && newContactData.email}onChange={handleAddNewContact} />
+                          <Input
+                            type="text"
+                            name="email"
+                            value={newContactData && newContactData.email}
+                            onChange={handleAddNewContact}
+                          />
                         </FormGroup>
                       </Col>
-                      <Col md="4">
+                      {/* <Col md="4">
                         <FormGroup>
                           <Label>Phone (Direct)</Label>
                           <Input type="number" name="phone_direct" value={newContactData && newContactData.phone_direct} onChange={handleAddNewContact} />
                         </FormGroup>
+                      </Col> */}
+                      <Col md="4">
+                        <FormGroup>
+                          <Label>Phone (Direct)</Label>
+                          <Input
+                            type="number"
+                            name="phone_direct"
+                            value={newContactData?.phone_direct || ''}
+                            onChange={handlePhoneCheck}
+                            invalid={isPhoneDuplicate}
+                          />
+                          {isPhoneDuplicate && phoneChecked && (
+                            <div style={{ color: 'red', fontSize: '0.8rem' }}>
+                              This phone number already exists.
+                            </div>
+                          )}
+                        </FormGroup>
                       </Col>
+
                       <Col md="4">
                         <FormGroup>
                           <Label>Mobile</Label>
-                          <Input type="number" name="mobile" value={newContactData && newContactData.mobile} onChange={handleAddNewContact} />
+                          <Input
+                            type="number"
+                            name="mobile"
+                            value={newContactData && newContactData.mobile}
+                            onChange={handleAddNewContact}
+                          />
                         </FormGroup>
                       </Col>
                       <Col md="4">
-                <FormGroup>
-                  <Label>
-                   Address
-                  </Label>
-                  <Input
-                    type="text"
-                    onChange={handleAddNewContact}
-                    name="address_flat"
-                    value={newContactData && newContactData.address_flat}
-                  />
-                </FormGroup>
-              </Col>
-              <Col md="4">
+                        <FormGroup>
+                          <Label>Address</Label>
+                          <Input
+                            type="text"
+                            onChange={handleAddNewContact}
+                            name="address_flat"
+                            value={newContactData && newContactData.address_flat}
+                          />
+                        </FormGroup>
+                      </Col>
+                      {/* <Col md="4">
                 <FormGroup>
                   <Label>
                    Address State
@@ -108,34 +210,77 @@ export default function TenderContactDetails({
                     name="address_state"
                   />
                 </FormGroup>
-              </Col>
-              <Col md="4">
-                <FormGroup>
-                  <Label>
-                   Address Street
-                  </Label>
-                  <Input
-                    type="text"
-                    onChange={handleAddNewContact}
-                    value={newContactData && newContactData.address_street}
-                    name="address_street"
-                  />
-                </FormGroup>
-              </Col>
-              <Col md="4">
-                <FormGroup>
-                  <Label>
-                  Postal Code
-                  </Label>
-                  <Input
-                    type="text"
-                    onChange={handleAddNewContact}
-                    value={newContactData && newContactData.address_po_code}
-                    name="address_po_code"
-                  />
-                </FormGroup>
-              </Col>
-              <Col md="4">
+              </Col> */}
+                      <Col md="4">
+                        <FormGroup>
+                          <Label>Address Street</Label>
+                          <Input
+                            type="text"
+                            onChange={handleAddNewContact}
+                            value={newContactData && newContactData.address_street}
+                            name="address_street"
+                          />
+                        </FormGroup>
+                      </Col>
+                      <Col md="4">
+                        <FormGroup>
+                          <Label>
+                            Country<span className="required"> *</span>
+                          </Label>
+                          <Input
+                            type="select"
+                            name="address_country"
+                            onChange={(e) => {
+                              setSelectedCountry(e.target.value);
+                              handleAddNewContact(e);
+                            }}
+                            value={newContactData?.address_country || 'India'}
+                          >
+                            <option value="">Please Select</option>
+                            {allCountries &&
+                              allCountries.map((country) => (
+                                <option key={country.country_code} value={country.name}>
+                                  {country.name}
+                                </option>
+                              ))}
+                          </Input>
+                        </FormGroup>
+                      </Col>
+                      {selectedCountry === 'India' && (
+                        <Col md="4">
+                          <FormGroup>
+                            <Label>
+                              State<span className="required"> *</span>
+                            </Label>
+                            <Input
+                              type="select"
+                              name="address_state"
+                              onChange={handleAddNewContact}
+                              value={newContactData?.address_state || ''}
+                            >
+                              <option value="">Please Select</option>
+                              {indiaStates.map((state) => (
+                                <option key={state} value={state}>
+                                  {state}
+                                </option>
+                              ))}
+                            </Input>
+                          </FormGroup>
+                        </Col>
+                      )}
+                      <Col md="4">
+                        <FormGroup>
+                          <Label>Postal Code</Label>
+                          <Input
+                            type="text"
+                            onChange={handleAddNewContact}
+                            value={newContactData && newContactData.address_po_code}
+                            name="address_po_code"
+                          />
+                        </FormGroup>
+                      </Col>
+
+                      {/* <Col md="4">
                 <FormGroup>
                   <Label>
                  Country
@@ -147,20 +292,18 @@ export default function TenderContactDetails({
                     name="address_country"
                   />
                 </FormGroup>
-              </Col>
-              <Col md="4">
-                <FormGroup>
-                  <Label>
-               GST NO
-                  </Label>
-                  <Input
-                    type="text"
-                    onChange={handleAddNewContact}
-                    value={newContactData && newContactData.gst_no}
-                    name="gst_no"
-                  />
-                </FormGroup>
-              </Col>
+              </Col> */}
+                      <Col md="4">
+                        <FormGroup>
+                          <Label>GST NO</Label>
+                          <Input
+                            type="text"
+                            onChange={handleAddNewContact}
+                            value={newContactData && newContactData.gst_no}
+                            name="gst_no"
+                          />
+                        </FormGroup>
+                      </Col>
                     </Row>
                   </Form>
                 </CardBody>

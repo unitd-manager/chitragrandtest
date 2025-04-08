@@ -113,6 +113,9 @@ const Reservation = () => {
               <td>Reservation Date</td>
               <td>Room Type</td>
               <td>Room Count</td>
+              <td>Delux</td>
+              <td>Super Delux Double</td>
+              <td>Delux Triple</td>
               <td>Status</td>
             </tr>
           </thead>
@@ -136,6 +139,9 @@ const Reservation = () => {
                     <td>{element.reservation_date ? moment(element.reservation_date).format('DD-MM-YYYY') : ''}</td>
                     <td>{element.room_type}</td>
                     <td>{element.room_count}</td>
+                    <td>{element.delux}</td>
+                    <td>{element.super_delux_double}</td>
+                    <td>{element.delux_triple}</td>
                     <td>{element.status}</td>
                   </tr>
                 );

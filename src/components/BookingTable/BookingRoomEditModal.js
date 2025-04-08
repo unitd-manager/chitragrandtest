@@ -33,34 +33,26 @@ const ContactEditModal = ({
     fetchRoomDetails: PropTypes.func,
   };
 
-  // const [loading, setLoading] = useState(true);
-
   const [contactinsert, setContactInsert] = useState(null);
 
   const handleInputs = (e) => {
     setContactInsert({ ...contactinsert, [e.target.name]: e.target.value });
   };
 
-  // Function to parse numeric values safely
   const parseValue = (value) => (value ? parseFloat(value) || 0 : 0);
 
-  // Effect to set initial data
   useEffect(() => {
     setContactInsert(contactData);
   }, [contactData]);
 
-  // Effect to update grand_total dynamically
   useEffect(() => {
     if (contactinsert) {
       const TotalAmount = parseValue(contactinsert.qty) * parseValue(contactinsert.amount);
       const ExtraAmount = parseValue(contactinsert.extra_person) * parseValue(contactinsert.extra_person_amount);
       const WaterAmount = parseValue(contactinsert.water_qty) * parseValue(contactinsert.water_amount);
       const RestaurantAmount = parseValue(contactinsert.restaurant_service_amount);
-
-      // Compute the Grand Total
-      const GrandTotal = TotalAmount + ExtraAmount + WaterAmount + RestaurantAmount;
-
-      // Update only the grand_total field in the state
+      const Discount = parseValue(contactinsert.discount);
+      const GrandTotal = TotalAmount + ExtraAmount + WaterAmount + RestaurantAmount - Discount;
       setContactInsert((prevState) => ({
         ...prevState,
         grand_total: GrandTotal,
@@ -74,19 +66,14 @@ const ContactEditModal = ({
     contactinsert?.water_qty,
     contactinsert?.water_amount,
     contactinsert?.restaurant_service_amount,
+    contactinsert?.discount,
   ]);
-
-  // Function to edit data in the database
 
   const editOrderItemUpdate = async () => {
     try {
       const isConfirmed = window.confirm("Are you sure you want to update this Booking?");
-    
-      if (!isConfirmed) {
-        return; // Stop execution if the user cancels
-      }
+      if (!isConfirmed) return;
 
-  
       const orderItem = {
         booking_service_id: contactinsert.booking_service_id,
         order_id: contactinsert.order_id,
@@ -96,14 +83,12 @@ const ContactEditModal = ({
         qty: contactinsert.qty || 1,
         grand_total: contactinsert.grand_total,
       };
-  
-      console.log("Updating order item:", orderItem);
-  
+
       const response = await api.post('/finance/editorderItem', orderItem);
-  
+
       if (response.status === 200) {
         alert("Order has been updated successfully.");
-        window.location.reload();
+        fetchRoomDetails(contactinsert.booking_id);
       } else {
         alert("Failed to update order item.");
       }
@@ -112,7 +97,6 @@ const ContactEditModal = ({
       alert("Failed to update order item.");
     }
   };
-  
 
   const editContactsData = () => {
     api
@@ -120,7 +104,16 @@ const ContactEditModal = ({
       .then(() => {
         message('Record edited successfully', 'success');
         fetchRoomDetails(contactinsert.booking_id);
-        editOrderItemUpdate()
+        const LogHistory = {
+          booking_id: contactinsert.booking_id,
+          action_type: 'Water qty',
+          contact_id: contactData.contact_id,
+          description: `${contactinsert?.room_number} Total Water Bottles ${contactinsert?.water_qty}`,
+        };
+        
+  
+        api.post('/booking/insertLogHistory', LogHistory)
+        editOrderItemUpdate();
         setEditContactEditModal(false);
       })
       .catch(() => {
@@ -128,188 +121,106 @@ const ContactEditModal = ({
       });
   };
 
-
   return (
-    <>
-      <Modal size="lg" isOpen={editContactEditModal}>
-        <ModalHeader>
-          Rooms Details
-          <Button
-            color="secondary"
-            onClick={() => {
-              setEditContactEditModal(false);
-            }}
-          >
-            X
-          </Button>
-        </ModalHeader>
+    <Modal size="lg" isOpen={editContactEditModal}>
+      <ModalHeader>
+        Rooms Details
+        <Button
+          color="secondary"
+          onClick={() => setEditContactEditModal(false)}
+        >
+          X
+        </Button>
+      </ModalHeader>
 
-        <ModalBody>
-          <Row>
-            <Col md="6">
-              <FormGroup>
-                <Label>
-                  Room Type<span className="required"> *</span>
-                </Label>
-                <Input
-                  name="room_type"
-                  value={contactinsert?.room_type || ''}
-                  onChange={handleInputs}
-                  type="select"
-                  disabled
-                >
-                  <option defaultValue="selected">Please Select</option>
-                  {roomStatus &&
-                    roomStatus.map((ele) => (
-                      <option key={ele.room_id} value={ele.room_type}>
-                        {ele.room_type}
-                      </option>
-                    ))}
-                </Input>
-              </FormGroup>
-            </Col>
-            <Col md="6">
-              <FormGroup>
-                <Label>Room Number</Label>
-                <Input
-                  type="text"
-                  onChange={handleInputs}
-                  value={contactinsert?.room_number || ''}
-                  name="room_number"
-                  disabled
-                />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Days</Label>
-                <Input
-                  type="text"
-                  onChange={handleInputs}
-                  value={contactinsert?.qty || ''}
-                  name="qty"
-                />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Room Price</Label>
-                <Input
-                  type="text"
-                  onChange={handleInputs}
-                  value={contactinsert?.amount || ''}
-                  name="amount"
-                />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Room Amount</Label>
-                <Input type="text" value={parseValue(contactinsert?.qty) * parseValue(contactinsert?.amount)} disabled />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Extra Person</Label>
-                <Input
-                  type="text"
-                  onChange={handleInputs}
-                  value={contactinsert?.extra_person || ''}
-                  name="extra_person"
-                />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Per Person Price</Label>
-                <Input
-                  type="text"
-                  onChange={handleInputs}
-                  value={contactinsert?.extra_person_amount || ''}
-                  name="extra_person_amount"
-                />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Extra Person Amount</Label>
-                <Input type="text" value={parseValue(contactinsert?.extra_person) * parseValue(contactinsert?.extra_person_amount)} disabled />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Water Qty</Label>
-                <Input
-                  type="text"
-                  onChange={handleInputs}
-                  value={contactinsert?.water_qty || ''}
-                  name="water_qty"
-                />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Per Water</Label>
-                <Input
-                  type="text"
-                  onChange={handleInputs}
-                  value={contactinsert?.water_amount || ''}
-                  name="water_amount"
-                />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Water Amount</Label>
-                <Input type="text" value={parseValue(contactinsert?.water_qty) * parseValue(contactinsert?.water_amount)} disabled />
-              </FormGroup>
-            </Col>
-            <Col md="4">
+      <ModalBody>
+        <Row>
+          <Col md="12" className="mb-3">
+            <h5 className="border-bottom pb-1">Room Details</h5>
+          </Col>
+
+          <Col md="6">
             <FormGroup>
-                <Label>Total Person</Label>
-                <Input
-                  type="text"
-                  onChange={handleInputs}
-                  value={contactinsert && contactinsert.capacity}
-                  name="capacity"
-                />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Food Service Amount</Label>
-                <Input
-                  type="text"
-                  onChange={handleInputs}
-                  value={contactinsert?.restaurant_service_amount || ''}
-                  name="restaurant_service_amount"
-                />
-              </FormGroup>
-            </Col>
-            <Col md="4">
-              <FormGroup>
-                <Label>Grand Total</Label>
-                <Input
-                  type="text"
-                  value={contactinsert?.grand_total || 0}
-                  name="grand_total"
-                  disabled
-                />
-              </FormGroup>
-            </Col>
-          </Row>
-        </ModalBody>
+              <Label>Room Type</Label>
+              <Input name="room_type" value={contactinsert?.room_type || ''} onChange={handleInputs} type="select" disabled>
+                <option>Please Select</option>
+                {roomStatus?.map((ele) => (
+                  <option key={ele.room_id} value={ele.room_type}>{ele.room_type}</option>
+                ))}
+              </Input>
+            </FormGroup>
+          </Col>
 
-        <ModalFooter>
-          <Button color="primary" onClick={editContactsData}>
-            Submit
-          </Button>
-          <Button color="secondary" onClick={() => setEditContactEditModal(false)}>
-            Cancel
-          </Button>
-        </ModalFooter>
-      </Modal>
-    </>
+          <Col md="6">
+            <FormGroup>
+              <Label>Room Number</Label>
+              <Input type="text" value={contactinsert?.room_number || ''} name="room_number" disabled />
+            </FormGroup>
+          </Col>
+
+          <Col md="12" className="mb-3">
+            <h5 className="border-bottom pb-1 mt-3">Billing Details</h5>
+          </Col>
+
+          {[
+            ['Days', 'qty'],
+            ['Room Price', 'amount'],
+            ['Extra Person', 'extra_person'],
+            ['Per Person Price', 'extra_person_amount'],
+            ['Water Qty', 'water_qty'],
+            ['Per Water', 'water_amount'],
+            ['Total Person', 'capacity'],
+            ['Food Service Amount', 'restaurant_service_amount'],
+            ['Discount', 'discount'],
+          ].map(([label, name]) => (
+            <Col md="6" >
+              <FormGroup>
+                <Label>{label}</Label>
+                <Input
+                  type="number"
+                  onChange={handleInputs}
+                  value={contactinsert?.[name] || ''}
+                  name={name}
+                  className="text-end"
+                />
+              </FormGroup>
+            </Col>
+          ))}
+
+          <Col md="12" className="mt-4">
+            <div className="p-3 border rounded bg-light">
+              <h5 className="mb-3">Billing Summary</h5>
+              <Row>
+                <Col md="6">Room Amount:</Col>
+                <Col md="6" className="text-end">₹{parseValue(contactinsert?.qty) * parseValue(contactinsert?.amount)}</Col>
+
+                <Col md="6">Extra Person Charges:</Col>
+                <Col md="6" className="text-end">₹{parseValue(contactinsert?.extra_person) * parseValue(contactinsert?.extra_person_amount)}</Col>
+
+                <Col md="6">Water Charges:</Col>
+                <Col md="6" className="text-end">₹{parseValue(contactinsert?.water_qty) * parseValue(contactinsert?.water_amount)}</Col>
+
+                <Col md="6">Food Service Amount:</Col>
+                <Col md="6" className="text-end">₹{parseValue(contactinsert?.restaurant_service_amount)}</Col>
+
+                <Col md="6">Discount:</Col>
+                <Col md="6" className="text-end">₹{parseValue(contactinsert?.discount)}</Col>
+
+                <Col md="12"><hr /></Col>
+
+                <Col md="6"><strong>Grand Total:</strong></Col>
+                <Col md="6" className="text-end fw-bold">₹{contactinsert?.grand_total || 0}</Col>
+              </Row>
+            </div>
+          </Col>
+        </Row>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button color="primary" onClick={editContactsData}>Submit</Button>
+        <Button color="secondary" onClick={() => setEditContactEditModal(false)}>Cancel</Button>
+      </ModalFooter>
+    </Modal>
   );
 };
 

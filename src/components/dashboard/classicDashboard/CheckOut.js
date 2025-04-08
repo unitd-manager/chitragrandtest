@@ -12,8 +12,8 @@ import {
   ModalBody,
 } from 'reactstrap';
 import moment from 'moment';
-import { FaEdit, FaSignOutAlt } from 'react-icons/fa';
-import * as Icon from 'react-feather';
+import { FaEdit, FaSignOutAlt,FaBook } from 'react-icons/fa';
+// import * as Icon from 'react-feather';
 import api from '../../../constants/api';
 import BookingRoomViewModal from '../../BookingTable/BookingRoomViewModal';
 import BookingRoomEditModal from '../../BookingTable/BookingRoomEditModal';
@@ -22,6 +22,7 @@ const CheckInList = () => {
   const [checkIns, setCheckIns] = useState([]);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [roomDetails, setRoomDetails] = useState([]);
+  const [LogHistory, setLogHistoryDetails] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null); // Store selected room
   const [loading, setLoading] = useState(true);
   const [editContactViewModal, setEditContactViewModal] = useState(false);
@@ -30,6 +31,8 @@ const CheckInList = () => {
   const [editContactEditModal, setEditContactEditModal] = useState(false);
   // const [isLoadingout, setIsLoadingout] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showLogHistoryModal, setShowLogHistoryModal] = useState(false);
+  console.log('LogHistory',LogHistory)
 
   // Fetch Check-in List
   useEffect(() => {
@@ -61,6 +64,22 @@ const CheckInList = () => {
       });
   };
 
+  const fetchLogHistory = (bookingId) => {
+ 
+    api
+      .post('/booking/getLogHistory', { booking_id: bookingId })
+      .then((res) => {
+        setLogHistoryDetails(res.data.data);
+       
+      })
+      .catch((err) => {
+        console.error('Error fetching room details:', err);
+      
+      });
+  };
+  // useEffect(() => {
+  //   fetchLogHistory();
+  // })
   // Fetch Room Types and Status List
   useEffect(() => {
     api
@@ -148,7 +167,7 @@ console.log("All checked out:", allCheckedOut);
 
           return {
             room_history_id: res1.data.data[0].room_history_id, // Use first result
-            is_available: 'yes',
+            is_available: 'No',
             cleaning: 'No',
           };
         } catch (error) {
@@ -227,8 +246,13 @@ console.log("All checked out:", allCheckedOut);
                     <th>#</th>
                     <th>Customer Name</th>
                     <th>Phone</th>
+                    <th>Grand Amount</th>
+                    <th>Advance Amount</th>
+                    <th>Balance Amount</th>
+                    <th>Total Rooms</th>
                     <th>Check In Date</th>
                     <th>Check In Time</th>
+                    <th></th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -238,8 +262,24 @@ console.log("All checked out:", allCheckedOut);
                       <td>{index + 1}</td>
                       <td>{checkIn.first_name}</td>
                       <td>{checkIn.mobile}</td>
+                      <td>{checkIn.grand_total||0}</td>
+                      <td>{checkIn.amount ||0}</td>
+                      <td>{checkIn.total ||0}</td>
+                      <td>{checkIn.booking_service_count}</td>
                       <td>{checkIn.booking_date}</td>
                       <td>{checkIn.assign_time}</td>
+                      <td>
+                        <Button
+                          color="primary"
+                          onClick={() => {
+                            fetchLogHistory(checkIn.booking_id); // Fetch rooms before opening modal
+                            // setSelectedBooking(checkIn.booking_id);
+                            setShowLogHistoryModal(true);
+                          }}
+                        >
+                        <FaBook className="me-1" /> Logs
+                        </Button>
+                      </td>
                       <td>
                         <Button
                           color="primary"
@@ -249,7 +289,7 @@ console.log("All checked out:", allCheckedOut);
                             setShowBookingModal(true);
                           }}
                         >
-                          <FaEdit /> Edit
+                          <FaEdit /> Room Details
                         </Button>
                       </td>
                     </tr>
@@ -261,6 +301,49 @@ console.log("All checked out:", allCheckedOut);
         </Col>
 
         {/* Room Details for Selected Booking */}
+        <Modal isOpen={showLogHistoryModal} toggle={() => setShowLogHistoryModal(false)} size="xl">
+            <ModalHeader toggle={() => setShowLogHistoryModal(false)}>
+              Log Details
+            </ModalHeader>
+            <ModalBody>
+              <Col md="12">
+                <Card className="p-3 shadow-lg">
+                  <h4 className="text-center mb-3">Log History</h4>
+                  {loading ? (
+                    <div className="text-center my-3">
+                      <Spinner color="primary" />
+                    </div>
+                  ) : (
+                    <Table bordered hover responsive>
+                      <thead className="table-primary">
+                        <tr>
+                           <th>S.No</th>
+                          <th>Booking id</th>
+                          <th>Action Type</th>
+                          <th>Description</th>
+                          <th>Customer Name</th>
+                          <th>Creation Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {LogHistory?.map((room,index) => (
+                          <tr key={room.log_history_id}>
+                             <td>{index+1}</td>
+                            <td>{room.booking_id}</td>
+                            <td>{room.action_type}</td>
+                            <td>{room.description}</td>
+                            <td>{room.first_name}</td>
+                            <td>{moment(room.creation_date).format('DD-MM-YYYY hh:mm A')}</td>
+
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  )}
+                </Card>
+              </Col>
+            </ModalBody>
+          </Modal>
 
         {showBookingModal && selectedBooking && roomDetails.length > 0 && (
           <Modal isOpen={showBookingModal} toggle={() => setShowBookingModal(false)} size="xl">
@@ -298,16 +381,17 @@ console.log("All checked out:", allCheckedOut);
                             <td>{room.room_number}</td>
                             {room?.status === 'Check In' ? (
                               <td>
-                                <div className="anchor">
+                                  <Button
+                          color="primary">
                                   <span
                                     onClick={() => {
                                       setSelectedRoom(room);
                                       setEditContactEditModal(true);
                                     }}
                                   >
-                                    <Icon.Edit2 />
+                                   <FaEdit />Edit
                                   </span>
-                                </div>
+                                  </Button>
                               </td>
                             ) : (
                               <td>
@@ -343,6 +427,7 @@ console.log("All checked out:", allCheckedOut);
                                   onClick={() =>{
                                     CheckOutRoomwise([room.room_number], room.booking_service_id,room.booking_id);
                                     statusCheck(room.booking_id)
+                                    fetchRoomDetails(room.booking_id)
                                    } }
                                 >
                                   <FaSignOutAlt /> Check Out

@@ -3,55 +3,63 @@ import PropTypes from "prop-types";
 import { FaBed } from "react-icons/fa";
 import { Container, Row, Col, Card, CardBody, Nav, NavItem, NavLink, Button } from "reactstrap";
 import api from "../../../constants/api";
-import HotelDashboard3 from "./Hotel5"; // Import the HotelDashboard3 component here
+// import HotelDashboard3 from "./Hotel5"; // Import the HotelDashboard3 component here
 
 
-const Cleaning = ({ sessionId, actionType, bookingCartId }) => {
+const Cleaning = ({getRoomDetails}) => {
   const [roomData, setRoomData] = useState({});
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedRooms, setSelectedRooms] = useState([]); // Store selected room IDs
-  const [isRoomUpdated, setIsRoomUpdated] = useState(false); // Flag to check if rooms are updated
+  // const [isRoomUpdated, setIsRoomUpdated] = useState(false); // Flag to check if rooms are updated
 
 
   // Fetch available & booked rooms
-  useEffect(() => {
+
+
+  const getRoomsByCleaning = () => {
     api.get("/booking/getRoomsByAvailability")
-      .then((res) => {
-        console.log("API Response:", res.data);
+    .then((res) => {
+      console.log("API Response:", res.data);
 
-        const formattedData = {};
-        res.data.data.forEach((room) => {
-          const {
-            room_id: roomId,
-            room_type: roomType,
-            room_number: roomNumber,
-            status,
-            bed_type: bedType,
-            floor_number: floorNumber,
-            room_size: roomSize,
-            room_history_id:roomhistoryId
-          } = room;
+      const formattedData = {};
+      res.data.data.forEach((room) => {
+        const {
+          room_id: roomId,
+          room_type: roomType,
+          room_number: roomNumber,
+          status,
+          bed_type: bedType,
+          floor_number: floorNumber,
+          room_size: roomSize,
+          room_history_id:roomhistoryId,
+          cleaning:CleaningStatus
+        } = room;
 
-          if (!formattedData[roomType]) {
-            formattedData[roomType] = { available: [], booked: [] };
-          }
+        if (!formattedData[roomType]) {
+          formattedData[roomType] = { available: [], booked: [] };
+        }
 
-          formattedData[roomType][status].push({
-            roomId,
-            roomNumber,
-            roomType,
-            bedType,
-            floorNumber,
-            roomSize,
-            roomhistoryId
-          });
+        formattedData[roomType][status].push({
+          roomId,
+          roomNumber,
+          roomType,
+          bedType,
+          floorNumber,
+          roomSize,
+          roomhistoryId,
+          CleaningStatus,
         });
+      });
 
-        console.log("Formatted Data:", formattedData);
-        setRoomData(formattedData);
-        setSelectedCategory(Object.keys(formattedData)[0] || null);
-      })
-      .catch((err) => console.error("Error fetching room data:", err));
+      console.log("Formatted Data:", formattedData);
+      setRoomData(formattedData);
+      setSelectedCategory(Object.keys(formattedData)[0] || null);
+    })
+    .catch((err) => console.error("Error fetching room data:", err));
+  }
+
+  useEffect(() => {
+    getRoomsByCleaning();
   }, []);
 
   // ✅ Handle room selection toggle
@@ -64,10 +72,7 @@ const Cleaning = ({ sessionId, actionType, bookingCartId }) => {
   };
 
   const updateRoomSelection = () => {
-    if (!sessionId || !actionType || !bookingCartId) {
-      alert("Missing session ID, action type, or booking cart ID.");
-      return;
-    }
+  
   
     if (!selectedRooms || selectedRooms.length === 0) {
       alert("No rooms selected.");
@@ -75,21 +80,22 @@ const Cleaning = ({ sessionId, actionType, bookingCartId }) => {
     }
   
     const requestData = {
-      sessionId,
-      actionType,
-      bookingCartId,
       rooms: selectedRooms.map(({ roomhistoryId }) => ({
         roomhistoryId,
-        isAvailable: "No",
+        cleaning: "Yes",
+        is_available: "Yes",
       })),
     };
   
     console.log("📌 Sending API Request:", JSON.stringify(requestData, null, 2));
   
     api
-    .post("/bookingcart/update-room-selection", requestData)
+    .post("/bookingcart/update-room-selection-cleaning", requestData)
     .then((res) => {
       console.log("API Response:", res.data); // Log the response
+
+      getRoomsByCleaning()
+      getRoomDetails()
   
       // Check if res.data is an array
       if (Array.isArray(res.data)) {
@@ -125,7 +131,7 @@ const Cleaning = ({ sessionId, actionType, bookingCartId }) => {
       if (res.data.success) {
         alert("✅ Rooms updated successfully!");
         setSelectedRooms([]); // Clear selection
-        setIsRoomUpdated(true); // Set the flag to true
+        // setIsRoomUpdated(true); // Set the flag to true
       } else {
         throw new Error(res.data.message || "Unknown error");
       }
@@ -143,10 +149,39 @@ const Cleaning = ({ sessionId, actionType, bookingCartId }) => {
     console.error("updateRoomSelection is not defined.");
   }
   
-  if (isRoomUpdated) {
-    // Once rooms are updated, show HotelDashboard3
-    return <HotelDashboard3 bookingCartId={bookingCartId} />;
-  }
+  // if (isRoomUpdated) {
+  //   // Once rooms are updated, show HotelDashboard3
+  //   return <HotelDashboard3 bookingCartId={bookingCartId} />;
+  // }
+
+  // Helper function to decide style based on cleaning + selection
+  const getRoomStyle = (room) => {
+    const isSelected = selectedRooms.some((r) => r.roomNumber === room.roomNumber);
+    
+    if (room.CleaningStatus === "No") {
+      return {
+        backgroundColor: isSelected ? "#ffc107" : "#808080",
+        color: "#fff",
+        cursor: "pointer",
+      };
+    }
+  
+    if (room.CleaningStatus === "Yes") {
+      return {
+        backgroundColor: "red",
+        color: "#fff",
+      };
+    }
+  
+    // Default fallback
+    return {
+      backgroundColor: "red",
+      color: "#fff",
+   
+    };
+  };
+  
+
 
   return (
     <Container className="mt-4">
@@ -185,15 +220,11 @@ const Cleaning = ({ sessionId, actionType, bookingCartId }) => {
       <Row className="justify-content-center">
         {selectedCategory && roomData[selectedCategory] ? (
           <>
-            {roomData[selectedCategory].available.map((room) => (
+            {roomData[selectedCategory].booked.map((room) => (
               <Col key={room.roomNumber} xs={12} sm={6} md={3} className="mb-3">
                 <Card
                   onClick={() => toggleRoomSelection(room)}
-                  style={{
-                    backgroundColor: selectedRooms.some((r) => r.roomNumber === room.roomNumber) ? "#ffc107" : "#28a745",
-                    color: "#fff",
-                    cursor: "pointer",
-                  }}
+                  style={getRoomStyle(room)}
                 >
                    <CardBody className="text-center p-3">
         <FaBed size={20} className="mb-1" /> {/* Room Icon */}
@@ -204,9 +235,9 @@ const Cleaning = ({ sessionId, actionType, bookingCartId }) => {
               </Col>
             ))}
 
-            {roomData[selectedCategory].booked.map((room) => (
+            {roomData[selectedCategory].available.map((room) => (
              <Col key={room.roomNumber} xs={12} sm={6} md={3} className="mb-3">
-                <Card style={{ backgroundColor: "#dc3545", color: "#fff" }}>
+                <Card style={{ backgroundColor: "#28a745", color: "#fff" }}>
                 <CardBody className="text-center p-3">
         <FaBed size={20} className="mb-1" /> {/* Room Icon */}
         <br />
@@ -235,9 +266,9 @@ const Cleaning = ({ sessionId, actionType, bookingCartId }) => {
 };
 
 Cleaning.propTypes = {
-  sessionId: PropTypes.string.isRequired,
-  actionType: PropTypes.string.isRequired,
-  bookingCartId: PropTypes.number.isRequired,
+  getRoomDetails: PropTypes.func.isRequired,
+  // actionType: PropTypes.string.isRequired,
+  // bookingCartId: PropTypes.number.isRequired,
 };
 
 export default Cleaning;
