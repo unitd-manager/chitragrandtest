@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { Button, Container, Row, Col, Card, Table, Input, Label } from 'reactstrap';
+import { Button, Container, Row, Col, Card, Table, Input, Label,Modal,ModalHeader,ModalBody, Spinner } from 'reactstrap';
 import Select from 'react-select';
 import moment from 'moment';
 import api from '../../../constants/api';
@@ -22,6 +22,8 @@ const HotelDashboard3 = ({
   const [contactIds, setContactId] = useState('');
   const [allCountries, setallCountries] = useState();
   const [customerReservation, setCustomerReservation] = useState('');
+  const [customerReservationHistory, setCustomerReservationHistory] = useState('');
+  const [loading, setLoading] = useState(true);
   const [cartAmount, setCartAmount] = useState({
     booking_cart_history_id: null,
     amount: null,
@@ -29,11 +31,15 @@ const HotelDashboard3 = ({
 
   const [isSaving, setIsSaving] = useState(false);
 
- 
+  const [showLogHistoryModal, setShowLogHistoryModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
   const [selectedReservation, setSelectedReservation] = useState(null); // Selected reservation data
 
+
   const toggleModal = () => setIsModalOpen(!isModalOpen);
+  const toggleModalHistory = () => setShowLogHistoryModal(!showLogHistoryModal);
+
+
 
   // Function to handle reservation confirmation
   const confirmReservation = (formData) => {
@@ -228,6 +234,19 @@ const HotelDashboard3 = ({
       .catch(() => {});
   };
 
+  const getContactByIdHistory = (contactId) => {
+    setLoading(true);
+    api
+      .post('/booking/getBookingDataHistory', { contact_id: contactId })
+      .then((res) => {
+        setCustomerReservationHistory(res.data.data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
+  };
+
   const [addContactModal, setAddContactModal] = useState(false);
   const addContactToggle = () => {
     setAddContactModal(!addContactModal);
@@ -348,6 +367,9 @@ const HotelDashboard3 = ({
     if (customer?.contact_id) {
       getContactById(customer.contact_id);
     }
+    if (customer?.contact_id) {
+      getContactByIdHistory(customer.contact_id);
+    }
   }, [customer.contact_id]);
   const BackTolist = () => {
     window.location.reload();
@@ -420,6 +442,17 @@ const HotelDashboard3 = ({
           <Col md="6">
             <Card className="shadow p-3 h-100" style={{ marginBottom: '250px' }}>
               <h5 className="mb-3 text-center">Room Availability</h5>
+              {contactIds && ( 
+              <span
+        className="anchor"
+        onClick={() => {
+          getContactByIdHistory(customer.contact_id);
+          toggleModalHistory(true);
+        }}
+      >
+        <b><u style={{ color: 'green' ,marginLeft:140}}>This Customer Booking History</u></b>
+      </span>
+       )}
               <Table bordered className="text-center">
                 <thead style={{ backgroundColor: '#87CEFA', color: 'red' }}>
                   <tr>
@@ -507,6 +540,7 @@ const HotelDashboard3 = ({
       </span>
     </>
   )}
+
 </Label>
 
                   <Select
@@ -689,6 +723,53 @@ const HotelDashboard3 = ({
           confirmReservation={confirmReservation}
         />
       )}
+       
+         <Modal isOpen={showLogHistoryModal} toggle={() => setShowLogHistoryModal(false)} size="xl">
+         <ModalHeader toggle={() => setShowLogHistoryModal(false)}>
+          Booking History
+         </ModalHeader>
+         <ModalBody>
+           <Col md="12">
+             <Card className="p-3 shadow-lg">
+               <h4 className="text-center mb-3">Booking History</h4>
+               {loading ? (
+                 <div className="text-center my-3">
+                   <Spinner color="primary" />
+                 </div>
+               ) : (
+                 <Table bordered hover responsive>
+                   <thead className="table-primary">
+                     <tr>
+                        <th>S.No</th>
+                       <th>From Date</th>
+                       <th>From Time</th>
+                       <th>Room Count</th>
+                       <th>Room Numbers</th>
+                       <th>Booking Status</th>
+                       <th>Payment Status</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {Array.isArray(customerReservationHistory) && customerReservationHistory?.map((element,index) => (
+                       <tr key={element.contact_id}>
+                          <td>{index+1}</td>
+                          <td>{element.booking_date}</td>
+                    <td>{element.assign_time}</td>
+                    <td>{element.booking_service_count}</td>
+                    <td>{element.room_details}</td>
+                    <td>{element.status}</td>
+                    <td>{element.payment_status}</td>
+
+                       </tr>
+                     ))}
+                   </tbody>
+                 </Table>
+               )}
+             </Card>
+           </Col>
+         </ModalBody>
+       </Modal>
+  
     </Container>
   );
 };

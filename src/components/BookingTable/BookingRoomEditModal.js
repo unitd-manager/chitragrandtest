@@ -186,6 +186,58 @@ const ContactEditModal = ({
               </FormGroup>
             </Col>
           ))}
+            {/* <Col md="6">
+  <FormGroup>
+    <Label>Water Qty</Label>
+    <div className="d-flex align-items-center">
+      <Button
+        color="secondary"
+        size="sm"
+        onClick={() =>
+          setContactInsert((prevState) => ({
+            ...prevState,
+            water_qty: Math.max(parseValue(prevState?.water_qty) - 1, 0),
+          }))
+        }
+      >
+        -
+      </Button>
+      <Input
+        type="number"
+        name="water_qty"
+        value={contactinsert?.water_qty || 0}
+        onChange={handleInputs}
+        className="mx-2 text-end"
+        style={{ width: '80px' }}
+        min="0"
+      />
+      <Button
+        color="secondary"
+        size="sm"
+        onClick={() =>
+          setContactInsert((prevState) => ({
+            ...prevState,
+            water_qty: parseValue(prevState?.water_qty) + 1,
+          }))
+        }
+      >
+        +
+      </Button>
+    </div>
+  </FormGroup>
+</Col>
+
+            <Col md="6">
+              <FormGroup>
+                <Label>Per Water</Label>
+                <Input
+                  type="text"
+                  onChange={handleInputs}
+                  value={contactinsert?.water_amount || ''}
+                  name="water_amount"
+                />
+              </FormGroup>
+            </Col> */}
 
           <Col md="12" className="mt-4">
             <div className="p-3 border rounded bg-light">

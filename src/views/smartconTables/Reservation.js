@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import * as Icon from 'react-feather';
 import moment from 'moment';
-import { Button, Input, Label } from 'reactstrap';
+import { Button, Input, Label,Col } from 'reactstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Link } from 'react-router-dom';
 import api from '../../constants/api';
 import BreadCrumbs from '../../layouts/breadcrumbs/BreadCrumbs';
 import CommonTable from '../../components/CommonTable';
+import ExportReport from '../../components/Report/ExportReport';
+
 
 const Reservation = () => {
   // State variables
@@ -16,6 +18,9 @@ const Reservation = () => {
   const [toDate, setToDate] = useState('');
   const [searchName, setSearchName] = useState('');
   const [searchMobile, setSearchMobile] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
+
+  const exportValue = "Reservation";
 
   // Fetch reservation data from API
   const getReservation = () => {
@@ -48,7 +53,8 @@ const Reservation = () => {
       (!fromDate || (bookingDate && bookingDate >= fromDate)) &&
       (!toDate || (bookingDate && bookingDate <= toDate)) &&
       (!searchName || element.first_name.toLowerCase().includes(searchName.toLowerCase())) &&
-      (!searchMobile || element.mobile.includes(searchMobile))
+      (!searchMobile || element.mobile.includes(searchMobile)) &&
+      (!paymentStatusFilter || element.payment_status === paymentStatusFilter)
     );
   })
   .sort((a, b) => {
@@ -64,6 +70,18 @@ const Reservation = () => {
   });
 
 
+  const columns = [
+    { name: 'SN', selector: 's_no' },
+    { name: 'Customer Name', selector: 'first_name' },
+    { name: 'Booking Date', selector: 'booking_date' },
+    { name: 'To Date', selector: 'to_booking_date' },
+    { name: 'Reservation Date', selector: 'reservation_date' },
+    { name: 'Room Type', selector: 'room_type' },
+    { name: 'Room Count', selector: 'room_count' },
+    { name: 'Advance Amount', selector: 'amount' },
+    { name: 'Payment Status', selector: 'payment_status' },
+    { name: 'Status', selector: 'status' },
+  ];
 
 
   return (
@@ -84,9 +102,24 @@ const Reservation = () => {
     onChange={(e) => { setSearchName(e.target.value); setSearchMobile(e.target.value); }} 
     style={{ width: '250px' }} /> */}
 
-  <Button color="secondary" onClick={() => { setFromDate(''); setToDate(''); setSearchName(''); setSearchMobile(''); }} style={{ whiteSpace: 'nowrap' }}>
+<Label style={{ whiteSpace: 'nowrap' }}>Payment Status:</Label>
+<Input
+  type="select"
+  value={paymentStatusFilter}
+  onChange={(e) => setPaymentStatusFilter(e.target.value)}
+  style={{ width: '150px' }}
+>
+  <option value="">All</option>
+  <option value="Paid">Paid</option>
+  <option value="Unpaid">Unpaid</option>
+</Input>
+
+  <Button color="secondary" onClick={() => { setFromDate(''); setToDate(''); setSearchName(''); setSearchMobile(''); setPaymentStatusFilter('');}} style={{ whiteSpace: 'nowrap' }}>
     Reset
   </Button>
+  <Col>
+              <ExportReport columns={columns} data={filteredReservations} exportValue={exportValue} />
+            </Col>
 </div>
 
 
@@ -111,11 +144,13 @@ const Reservation = () => {
               <td>Booking Date</td>
               <td>To Date</td>
               <td>Reservation Date</td>
-              <td>Room Type</td>
-              <td>Room Count</td>
               <td>Delux</td>
               <td>Super Delux Double</td>
               <td>Delux Triple</td>
+              <td>Room Type</td>
+              <td>Room Count</td>
+              <td>Advance Amount</td>
+              <td>Payment Status</td>
               <td>Status</td>
             </tr>
           </thead>
@@ -137,11 +172,13 @@ const Reservation = () => {
                     <td>{bookingDate ? moment(bookingDate).format('DD-MM-YYYY') : ''}</td>
                     <td>{element.to_booking_date ? moment(element.to_booking_date).format('DD-MM-YYYY') : ''}</td>
                     <td>{element.reservation_date ? moment(element.reservation_date).format('DD-MM-YYYY') : ''}</td>
-                    <td>{element.room_type}</td>
-                    <td>{element.room_count}</td>
                     <td>{element.delux}</td>
                     <td>{element.super_delux_double}</td>
                     <td>{element.delux_triple}</td>
+                    <td>{element.room_type}</td>
+                    <td>{element.room_count}</td>
+                    <td>{element.amount}</td>
+                    <td>{element.payment_status}</td>
                     <td>{element.status}</td>
                   </tr>
                 );

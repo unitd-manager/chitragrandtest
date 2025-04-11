@@ -480,10 +480,15 @@ const CheckInList = () => {
                     <tr key={checkIn.booking_id}>
                       <td>{index + 1}</td>
                       <td>{checkIn.first_name}</td>
-                      <td>{checkIn.mobile}</td>
+                      <td>{checkIn.phone_direct}</td>
                       <td>{checkIn.grand_total}</td>
                       <td>{checkIn.amount}</td>
-                      <td>{checkIn.total}</td>
+                      <td>
+  {(!checkIn.amount || checkIn.amount === 0)
+    ? checkIn.grand_total
+    : `${checkIn.total}`}
+</td>
+
                       <td>{checkIn.booking_service_count}</td>
                       <td>{checkIn.booking_date}</td>
                       <td>{checkIn.assign_time}</td>

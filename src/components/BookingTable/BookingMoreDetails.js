@@ -10,6 +10,7 @@ import {
 import * as Icon from 'react-feather';
 import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
+import moment from 'moment';
 import ComponentCard from '../ComponentCard';
 import AttachmentModalV2 from '../Tender/AttachmentModalV2';
 import ViewFileComponentV2 from '../ProjectModal/ViewFileComponentV2';
@@ -23,6 +24,7 @@ import BookingRoomViewModal from './BookingRoomViewModal'
 import api from '../../constants/api';
 import message from '../Message';
 import '../../assets/css/Loader.css'
+// import { dateFnsLocalizer } from 'react-big-calendar';
 
 
 export default function BookingMoreDetails({
@@ -249,10 +251,46 @@ export default function BookingMoreDetails({
       }
     };
 
+    const statusCheck = async (bookingId) => {
+      try {
+        // Fetch all booking services for this booking_id
+        const response = await api.post('/booking/getBookingServiceStatus', {
+          booking_id: bookingId,
+        });
+    
+        // Extract the status list
+        const roomHistoryStatus = response?.data?.data || [];
+  
+        console.log("Room history status:", roomHistoryStatus);
+        roomHistoryStatus.forEach((room, index) => {
+          console.log(`Room ${index + 1}: ${room.status}`);
+        });
+    
+        // Check if all statuses are "Check out"
+        const allCheckedOut = roomHistoryStatus.every(room => room.status === "Check out");
+  
+  
+        console.log("Room history status:", roomHistoryStatus);
+  console.log("All checked out:", allCheckedOut);
+    
+        if (allCheckedOut) {
+          // Update the booking table if all services are checked out
+          await api.post("/booking/edit-Booking_status", { 
+            status: "Completed", 
+            booking_id: bookingId 
+          });
+    
+          console.log(`Booking ID ${bookingId} marked as Completed.`);
+        }
+      } catch (error) {
+        console.error(`Error checking status for booking ${bookingId}:`, error);
+      }
+    };
+
     const RoomVacate = async () => {
       try {
         const isConfirmed = window.confirm("Are you sure you want to Check Out?");
-        if (!isConfirmed) return; // Stop execution if user cancels
+        if (!isConfirmed) return;
     
         setIsLoadingout(true);
     
@@ -264,38 +302,56 @@ export default function BookingMoreDetails({
           return;
         }
     
-        const roomNumbers = res.data.data.map((item) => item.room_number); // Extract room numbers
+        const roomNumbers = res.data.data.map((item) => item.room_number);
+        const roomServiceIds = res.data.data.map((item) => item.booking_service_id);
     
         // Fetch room history for each room number
         const roomHistoryPromises = roomNumbers.map(async (roomNumber) => {
-          const res1 = await api.post('/booking/BookingHistoryRoomNumber', { room_number: roomNumber });
+          try {
+            const res1 = await api.post('/booking/BookingHistoryRoomNumber', { room_number: roomNumber });
     
-          if (!res1.data.data || res1.data.data.length === 0) {
-            console.warn(`No room history found for room number: ${roomNumber}`);
+            if (!res1.data.data || res1.data.data.length === 0) {
+              console.warn(`No room history found for room number: ${roomNumber}`);
+              return null;
+            }
+    
+            return {
+              room_history_id: res1.data.data[0].room_history_id,
+              is_available: "yes",
+            };
+          } catch (err) {
+            console.error(`Error fetching history for room ${roomNumber}:`, err);
             return null;
           }
-    
-          return {
-            room_history_id: res1.data.data[0].room_history_id, // Use first result
-            is_available: "yes",
-          };
         });
     
-        // Resolve all room history fetch requests
         const roomHistories = await Promise.all(roomHistoryPromises);
-    
-        // Filter out null values (in case no history was found for some rooms)
         const validRoomUpdates = roomHistories.filter(Boolean);
     
-        // Update room availability in parallel
-        const roomUpdatePromises = validRoomUpdates.map((statusInsert) =>
-          api.post('/booking/edit-Rooms-History-Edit', statusInsert)
-        );
+        // Update room availability
+        if (validRoomUpdates.length > 0) {
+          await Promise.all(validRoomUpdates.map((statusInsert) =>
+            api.post('/booking/edit-Rooms-History-Edit', statusInsert)
+          ));
+        }
     
-        await Promise.all(roomUpdatePromises);
+        // Get current date and time
+        const currentDate = moment().format('YYYY-MM-DD');
+        const currentTime = moment().format('HH:mm:ss');
     
-        // Update booking status to "Completed"
-        await api.post("/booking/edit-Booking_status", { status: "Completed", booking_id: id });
+        // **Loop through each booking_service_id and update check-out status**
+        await Promise.all(roomServiceIds.map(serviceId =>
+          api.post('/booking/edit-checkOut', {
+            status: 'Check out',
+            check_out_date: currentDate,
+            check_out_time: currentTime,
+            booking_service_id: serviceId,
+          })
+        ));
+    
+        console.log("Check-out API response received. Fetching status again...");
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await statusCheck(id);
     
         alert("Check Out Successfully!");
         window.location.reload();
@@ -303,10 +359,275 @@ export default function BookingMoreDetails({
         console.error("Error updating booking:", error);
         alert("Failed to update booking.");
       } finally {
-        setIsLoadingout(false); // Hide loader after API call (success or failure)
+        setIsLoadingout(false);
       }
     };
     
+
+    // const RoomVacate = async () => {
+    //   try {
+    //     const isConfirmed = window.confirm("Are you sure you want to Check Out?");
+    //     if (!isConfirmed) return; // Stop execution if user cancels
+    
+    //     setIsLoadingout(true);
+    
+    //     // Fetch booking service details
+    //     const res = await api.post('/booking/getBookingServiceById', { booking_id: id });
+    
+    //     if (!res.data.data || res.data.data.length === 0) {
+    //       alert("No room history data found");
+    //       return;
+    //     }
+    
+    //     const roomNumbers = res.data.data.map((item) => item.room_number); // Extract room numbers
+    
+    //     // Fetch room history for each room number
+    //     const roomHistoryPromises = roomNumbers.map(async (roomNumber) => {
+    //       const res1 = await api.post('/booking/BookingHistoryRoomNumber', { room_number: roomNumber });
+    
+    //       if (!res1.data.data || res1.data.data.length === 0) {
+    //         console.warn(`No room history found for room number: ${roomNumber}`);
+    //         return null;
+    //       }
+    
+    //       return {
+    //         room_history_id: res1.data.data[0].room_history_id, // Use first result
+    //         is_available: "yes",
+    //       };
+    //     });
+    
+    //     // Resolve all room history fetch requests
+    //     const roomHistories = await Promise.all(roomHistoryPromises);
+    
+    //     // Filter out null values (in case no history was found for some rooms)
+    //     const validRoomUpdates = roomHistories.filter(Boolean);
+    
+    //     // Update room availability in parallel
+    //     const roomUpdatePromises = validRoomUpdates.map((statusInsert) =>
+    //       api.post('/booking/edit-Rooms-History-Edit', statusInsert)
+    //     );
+    
+    //     await Promise.all(roomUpdatePromises);
+
+
+    //     const roomServiceId = res.data.data.map((item) => item.booking_service_id);
+    //     // Update booking status to "Completed"
+    //     // await api.post("/booking/edit-Booking_status", { status: "Completed", booking_id: id });
+    //       // Get current date and time
+    //   const currentDate = moment().format('YYYY-MM-DD');
+    //   const currentTime = moment().format('HH:mm:ss');
+
+    //   // Update booking status to "Completed"
+    //   await api.post('/booking/edit-checkOut', {
+    //     status: 'Check out',
+    //     check_out_date: currentDate,
+    //     check_out_time: currentTime,
+    //     booking_service_id: roomServiceId,
+    //   });
+
+    //   console.log("Check-out API response received. Fetching status again...");
+    //   await new Promise(resolve => setTimeout(resolve, 2000)); // Short delay before checking status
+    //   await statusCheck(id);
+    
+    //     alert("Check Out Successfully!");
+    //     window.location.reload();
+    //   } catch (error) {
+    //     console.error("Error updating booking:", error);
+    //     alert("Failed to update booking.");
+    //   } finally {
+    //     setIsLoadingout(false); // Hide loader after API call (success or failure)
+    //   }
+    // };
+    
+
+  //   const [currentDate, setCurrentDate] = useState('');
+  // const [currentTime, setCurrentTime] = useState('');
+
+  // useEffect(() => {
+  //   const updateDateTime = () => {
+  //     setCurrentDate(moment().format('YYYY-MM-DD')); // Date: 2025-03-17
+  //     setCurrentTime(moment().format('HH:mm:ss'));  // Time: 14:45:30
+  //   };
+
+  //   updateDateTime(); // Initial call
+  //   const interval = setInterval(updateDateTime, 1000); // Update every second
+
+  //   return () => clearInterval(interval); // Cleanup interval on unmount
+  // }, []);
+
+  // const CheckOutRoomwise = async (roomNumbers, serviceId) => {
+  //   try {
+  //     // Ensure roomNumbers is an array
+  //     if (!Array.isArray(roomNumbers)) {
+  //       roomNumbers = [roomNumbers]; // Convert single room number to array
+  //     }
+  
+  //     // Confirm Check-Out Action
+  //     const isConfirmed = window.confirm("Are you sure you want to Check Out?");
+  //     if (!isConfirmed) return;
+  
+  //     setIsLoadingout(true);
+  
+  //     // Check if roomNumbers is empty
+  //     if (!roomNumbers || roomNumbers.length === 0) {
+  //       alert("No rooms selected for check-out.");
+  //       return;
+  //     }
+  
+  //     // Fetch room history for each room number
+  //     const roomHistoryPromises = roomNumbers.map(async (roomNumber) => {
+  //       try {
+  //         const res1 = await api.post('/booking/BookingHistoryRoomNumber', { room_number: roomNumber });
+  
+  //         if (!res1.data || !res1.data.data || res1.data.data.length === 0) {
+  //           console.warn(`No room history found for room number: ${roomNumber}`);
+  //           return null;
+  //         }
+  
+  //         return {
+  //           room_history_id: res1.data.data[0].room_history_id, // Use first result
+  //           is_available: "yes",
+  //         };
+  //       } catch (error) {
+  //         console.error(`Error fetching room history for room number ${roomNumber}:`, error);
+  //         return null;
+  //       }
+  //     });
+  
+  //     // Resolve all room history fetch requests
+  //     const roomHistories = await Promise.all(roomHistoryPromises);
+      
+  //     // Filter out null values (in case no history was found)
+  //     const validRoomUpdates = roomHistories.filter(Boolean);
+  
+  //     if (validRoomUpdates.length === 0) {
+  //       alert("No valid room history data found.");
+  //       return;
+  //     }
+  
+  //     // Update room availability in parallel
+  //     const roomUpdatePromises = validRoomUpdates.map((statusInsert) =>
+  //       api.post('/booking/edit-Rooms-History-Edit', statusInsert)
+  //     );
+  
+  //     await Promise.all(roomUpdatePromises);
+  
+  //     // Get current date and time
+  //     const currentDate = moment().format('YYYY-MM-DD');
+  //     const currentTime = moment().format('HH:mm:ss');
+  
+  //     // Update booking status to "Completed"
+  //     await api.post("/booking/edit-checkOut", {
+  //       status: "Check out",
+  //       check_out_date: currentDate,
+  //       check_out_time: currentTime,
+  //       booking_service_id: serviceId
+  //     });
+  
+  //     alert("Check Out Successfully!");
+  //     window.location.reload();
+  //   } catch (error) {
+  //     console.error("Error updating booking:", error);
+  //     alert("Failed to update booking.");
+  //   } finally {
+  //     setIsLoadingout(false); // Hide loader after API call (success or failure)
+  //   }
+  // };
+
+
+  
+
+  useEffect(() => {
+    statusCheck()
+  }, []);
+
+  const CheckOutRoomwise = async (roomNumbers, serviceId,bookingId) => {
+    try {
+      // Ensure roomNumbers is an array
+      if (!Array.isArray(roomNumbers)) {
+        roomNumbers = [roomNumbers]; // Convert single room number to array
+      }
+
+      // Confirm Check-Out Action
+      const isConfirmed = window.confirm('Are you sure you want to Check Out?');
+      if (!isConfirmed) return;
+
+      setIsLoadingout(true);
+
+      // Check if roomNumbers is empty
+      if (!roomNumbers || roomNumbers.length === 0) {
+        alert('No rooms selected for check-out.');
+        return;
+      }
+
+      // Fetch room history for each room number
+      const roomHistoryPromises = roomNumbers.map(async (roomNumber) => {
+        try {
+          const res1 = await api.post('/booking/BookingHistoryRoomNumber', {
+            room_number: roomNumber,
+          });
+
+          if (!res1.data || !res1.data.data || res1.data.data.length === 0) {
+            console.warn(`No room history found for room number: ${roomNumber}`);
+            return null;
+          }
+
+          return {
+            room_history_id: res1.data.data[0].room_history_id, // Use first result
+            is_available: 'yes',
+            cleaning: 'No',
+          };
+        } catch (error) {
+          console.error(`Error fetching room history for room number ${roomNumber}:`, error);
+          return null;
+        }
+      });
+
+      // Resolve all room history fetch requests
+      const roomHistories = await Promise.all(roomHistoryPromises);
+
+      // Filter out null values (in case no history was found)
+      const validRoomUpdates = roomHistories.filter(Boolean);
+
+      if (validRoomUpdates.length === 0) {
+        alert('No valid room history data found.');
+        return;
+      }
+
+      // Update room availability in parallel
+      const roomUpdatePromises = validRoomUpdates.map((statusInsert) =>
+        api.post('/booking/edit-Rooms-History-Edit', statusInsert),
+      );
+
+      await Promise.all(roomUpdatePromises);
+
+      // Get current date and time
+      const currentDate = moment().format('YYYY-MM-DD');
+      const currentTime = moment().format('HH:mm:ss');
+
+      // Update booking status to "Completed"
+      await api.post('/booking/edit-checkOut', {
+        status: 'Check out',
+        check_out_date: currentDate,
+        check_out_time: currentTime,
+        booking_service_id: serviceId,
+      });
+
+      console.log("Check-out API response received. Fetching status again...");
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Short delay before checking status
+      await statusCheck(bookingId);
+
+      alert('Check Out Successfully!')   
+  
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      alert('Failed to update booking.');
+    } finally {
+      setIsLoadingout(false); // Hide loader after API call (success or failure)
+    }
+  };
+  
     
 
     const BookingHistory = (roomTyp) => {
@@ -370,6 +691,8 @@ export default function BookingMoreDetails({
           bookingDetails={bookingDetails}
           getOrdersById={getOrdersById}
           contactAddress={contactAddress}
+          CheckOutRoomwise={CheckOutRoomwise}
+          statusCheck={statusCheck}
          >
          </BookingRoomLinked>
          <BookingRoomEditModal

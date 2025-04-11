@@ -59,12 +59,12 @@ const PdfCreateInvoice = ({ invoiceId, projectDetail }) => {
         message('Invoice Data Not Found', 'info');
       });
   };
-  const calculateTotal = () => {
-    const grandTotal = cancelInvoice.reduce((acc, element) => acc + element.amount, 0);
-    const gstValue = createInvoice.gst_value || 0;
-    const total = grandTotal + gstValue;
-    return total;
-  };
+  // const calculateTotal = () => {
+  //   const grandTotal = cancelInvoice.reduce((acc, element) => acc + element.amount, 0);
+  //   const gstValue = createInvoice.gst_value || 0;
+  //   const total = grandTotal + gstValue;
+  //   return total;
+  // };
   //console.log('2', gstTotal);
   const getInvoiceItemById = () => {
     api
@@ -136,13 +136,13 @@ const PdfCreateInvoice = ({ invoiceId, projectDetail }) => {
           alignment: 'center',
         },
         {
-          text: `${element.unit_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          text: `${element.unit_price?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
           border: [false, false, false, true],
           margin: [0, 5, 0, 5],
           style: 'tableBody1',
         },
         {
-          text: `${element.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          text: `${element.amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
           border: [false, false, false, true],
           margin: [0, 5, 0, 5],
           style: 'tableBody1',
@@ -324,19 +324,20 @@ const PdfCreateInvoice = ({ invoiceId, projectDetail }) => {
                 // },
                 // '\n',
                 {
-                  text: `SGST :${(createInvoice.sgst ? createInvoice.sgst : '').toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                  text: `SGST : ${(createInvoice.sgst ? Number(createInvoice.sgst) : 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
                   style: ['textSize1'],
                   margin: [145, 0, 0, 0],
                 },
                 '\n',
                 {
-                  text: `CGST :${(createInvoice.cgst ? createInvoice.cgst : '').toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                  text: `CGST : ${(createInvoice.cgst ? Number(createInvoice.cgst) : 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
                   style: ['textSize1'],
                   margin: [145, 0, 0, 0],
                 },
+                
                 '\n',
                 {
-                  text: `Total :${calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                  text: `Total : ${(createInvoice.cgst ? Number(createInvoice.invoice_amount) : 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
                   style: ['textSize1'],
                   margin: [145, 0, 0, 0],
                 },

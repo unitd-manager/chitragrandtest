@@ -17,8 +17,8 @@ export default function FinanceDeliveryAddress({ financeDetails, handleInputs })
               <Input
                 type="text"
                 onChange={handleInputs}
-                value={financeDetails && financeDetails.shipping_first_name}
-                name="shipping_first_name"
+                value={financeDetails && financeDetails.cust_company_name}
+                name="cust_company_name"
               />
             </FormGroup>
           </Col>
@@ -28,8 +28,8 @@ export default function FinanceDeliveryAddress({ financeDetails, handleInputs })
               <Input
                 type="text"
                 onChange={handleInputs}
-                value={financeDetails && financeDetails.shipping_address1}
-                name="shipping_address1"
+                value={financeDetails && financeDetails.cust_address1}
+                name="cust_address1"
               />
             </FormGroup>
           </Col>
@@ -39,8 +39,19 @@ export default function FinanceDeliveryAddress({ financeDetails, handleInputs })
               <Input
                 type="text"
                 onChange={handleInputs}
-                value={financeDetails && financeDetails.shipping_address2}
-                name="shipping_address2"
+                value={financeDetails && financeDetails.cust_address2}
+                name="cust_address2"
+              />
+            </FormGroup>
+          </Col>
+          <Col md="3">
+            <FormGroup>
+              <Label>State</Label>
+              <Input
+                type="text"
+                onChange={handleInputs}
+                value={financeDetails && financeDetails.cust_address_state}
+                name="cust_address_state"
               />
             </FormGroup>
           </Col>
@@ -50,8 +61,8 @@ export default function FinanceDeliveryAddress({ financeDetails, handleInputs })
               <Input
                 type="text"
                 onChange={handleInputs}
-                value={financeDetails && financeDetails.shipping_address_country}
-                name="shipping_address_country"
+                value={financeDetails && financeDetails.cust_address_country}
+                name="cust_address_country"
               />
             </FormGroup>
           </Col>
@@ -61,30 +72,19 @@ export default function FinanceDeliveryAddress({ financeDetails, handleInputs })
               <Input
                 type="text"
                 onChange={handleInputs}
-                value={financeDetails && financeDetails.shipping_address_po_code}
-                name="shipping_address_po_code"
+                value={financeDetails && financeDetails.cust_address_po_code}
+                name="cust_address_po_code"
               />
             </FormGroup>
           </Col>
-          {/* <Col md="3">
-            <FormGroup>
-              <Label> Delivery Date</Label>
-              <Input
-                type="date"
-                onChange={handleInputs}
-                value={financeDetails && financeDetails.delivery_date}
-                name="delivery_date"
-              />
-            </FormGroup>
-          </Col> */}
           <Col md="3">
             <FormGroup>
-              <Label>Terms </Label>
+              <Label>Gst No</Label>
               <Input
-                type="textarea"
+                type="text"
                 onChange={handleInputs}
-                value={financeDetails && financeDetails.delivery_terms}
-                name="delivery_terms"
+                value={financeDetails && financeDetails.cust_gst_no}
+                name="cust_gst_no"
               />
             </FormGroup>
           </Col>

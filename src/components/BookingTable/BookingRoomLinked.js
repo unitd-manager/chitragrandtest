@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Row,
   Form,
@@ -15,6 +15,7 @@ import {
   CardBody,
 } from 'reactstrap';
 import PropTypes from 'prop-types';
+import moment from 'moment';
 import * as Icon from 'react-feather';
 import api from '../../constants/api';
 
@@ -38,7 +39,8 @@ export default function BookingRoomLinked({
   id,
   getOrdersById,
   contactAddress,
- 
+  CheckOutRoomwise,
+  statusCheck,
 }) {
   BookingRoomLinked.propTypes = {
     setContactData: PropTypes.func,
@@ -60,11 +62,12 @@ export default function BookingRoomLinked({
     id: PropTypes.any,
     getOrdersById: PropTypes.func,
     contactAddress: PropTypes.object,
+    CheckOutRoomwise: PropTypes.func,
+    statusCheck: PropTypes.func,
   };
 
-
   const [isLoading, setIsLoading] = useState(false);
- 
+
   //  Table Contact
   const columns = [
     {
@@ -107,36 +110,32 @@ export default function BookingRoomLinked({
     },
     {
       name: 'Days',
-      selector: 'room_number',
-      sortable: true,
-      grow: 0,
-      wrap: true,
     },
     {
       name: 'Room Amount',
-      selector: 'room_number',
-      sortable: true,
-      grow: 0,
-      wrap: true,
     },
     {
       name: 'Total Amount',
-      selector: 'room_number',
-      sortable: true,
-      grow: 0,
-      wrap: true,
     },
     {
-      name: 'No of Person',
-      selector: 'capacity',
-      sortable: true,
-      grow: 0,
+      name: 'Check In Date',
+    },
+    {
+      name: 'Check In Time',
+    },
+    {
+      name: 'Check Out Date',
+    },
+    {
+      name: 'Check Out Time',
+    },
+    {
+      name: '',
     },
     {
       name: 'Action',
     },
   ];
-
 
   const [bookingServicename, setBookingServiceName] = useState();
 
@@ -146,65 +145,61 @@ export default function BookingRoomLinked({
       .then((res) => {
         setBookingServiceName(res.data.data);
       })
-      .catch(() => {
-     
-      });
+      .catch(() => {});
   };
 
-console.log('contactAddress',contactAddress)
+  console.log('contactAddress', contactAddress);
   //Insert order for finance module
   const insertOrder = () => {
-
-    const OrdersDetails ={
-    booking_id : id,
-    order_date: new Date().toLocaleDateString(),
-    shipping_address1:contactAddress.address_flat,
-    shipping_address_country:contactAddress.address_country,
-    shipping_address2:contactAddress.address_street,
-    shipping_address_state:contactAddress.address_state,
-    shipping_address_po_code:contactAddress.address_po_code,
-    cust_address1:contactAddress.address_flat,
-    cust_address2:contactAddress.address_street,
-    cust_address_state:contactAddress.address_state,
-    cust_address_po_code:contactAddress.address_po_code,
-    cust_address_country:contactAddress.address_country,
-    order_status:"Booking Confirm",
-    shipping_first_name:contactAddress.first_name,
-    cust_company_name:contactAddress.first_name,
-    cust_gst_no:contactAddress.gst_no,
-
-    }
+    const OrdersDetails = {
+      booking_id: id,
+      order_date: new Date().toLocaleDateString(),
+      shipping_address1: contactAddress.address_flat,
+      shipping_address_country: contactAddress.address_country,
+      shipping_address2: contactAddress.address_street,
+      shipping_address_state: contactAddress.address_state,
+      shipping_address_po_code: contactAddress.address_po_code,
+      cust_address1: contactAddress.address_flat,
+      cust_address2: contactAddress.address_street,
+      cust_address_state: contactAddress.address_state,
+      cust_address_po_code: contactAddress.address_po_code,
+      cust_address_country: contactAddress.address_country,
+      order_status: 'Booking Confirm',
+      shipping_first_name: contactAddress.first_name,
+      cust_company_name: contactAddress.first_name,
+      cust_gst_no: contactAddress.gst_no,
+    };
     setIsLoading(true);
-  
+
     api
-      .post("/finance/insertOrder", OrdersDetails)
+      .post('/finance/insertOrder', OrdersDetails)
       .then((res) => {
         const insertedId = res.data.data.insertId;
-  
+
         // Create an array of promises for order items
         const orderItemPromises = bookingServicename.map((item) => {
           const orderItem = {
-            contact_id: item.contact_id, 
+            contact_id: item.contact_id,
             order_id: insertedId,
             unit_price: item.amount,
-            cost_price: item.amount* item.qty,
+            cost_price: item.amount * item.qty,
             item_title: item.room_type,
             qty: item.qty,
             booking_id: item.booking_id,
             booking_service_id: item.booking_service_id,
           };
-  
-          console.log("Order item:", orderItem);
-  
-          return api.post("/finance/insertorder_item", orderItem);
+
+          console.log('Order item:', orderItem);
+
+          return api.post('/finance/insertorder_item', orderItem);
         });
-  
+
         // Execute all order item inserts, then update booking status
-        return Promise.all(orderItemPromises)
-          // .then(() => {
-          //   const bookingStatus = { status: "Completed" ,booking_id:id};
-          //   return api.post("/booking/edit-Booking_status", bookingStatus);
-          // });
+        return Promise.all(orderItemPromises);
+        // .then(() => {
+        //   const bookingStatus = { status: "Completed" ,booking_id:id};
+        //   return api.post("/booking/edit-Booking_status", bookingStatus);
+        // });
       })
       .then(() => {
         getOrdersById(); // Fetch updated order data after completion
@@ -212,8 +207,7 @@ console.log('contactAddress',contactAddress)
         window.location.reload();
       })
       .catch((error) => {
-        console.error("Error inserting order:", error);
-     
+        console.error('Error inserting order:', error);
       });
   };
 
@@ -282,20 +276,19 @@ console.log('contactAddress',contactAddress)
   };
 
   useEffect(() => {
-    getServiceLinked()
+    getServiceLinked();
   }, []);
-  
 
   return (
     <Form>
-       {isLoading && (
-  <div className="loader-overlay">
-    <div className="spinner"></div>
-    <p>Processing Check in...</p>
-  </div>
-)}
+      {isLoading && (
+        <div className="loader-overlay">
+          <div className="spinner"></div>
+          <p>Processing Check in...</p>
+        </div>
+      )}
       <Row>
-      {!orderId && (
+        {!orderId && (
           <Col md="3">
             <FormGroup>
               <Button
@@ -371,6 +364,17 @@ console.log('contactAddress',contactAddress)
                                 />
                               </FormGroup>
                             </Col>
+                            <Col md="6">
+                              <FormGroup>
+                                <Label>Check In Time</Label>
+                                <Input
+                                  type="time"
+                                  value={newContactData?.check_in_time || ''}
+                                  onChange={handleAddNewContact}
+                                  name="check_in_time"
+                                />
+                              </FormGroup>
+                            </Col>
                           </Row>
                         </Form>
                       </CardBody>
@@ -401,7 +405,7 @@ console.log('contactAddress',contactAddress)
           </Col>
         )}
 
-          {!orderId && (
+        {!orderId && (
           <Col md="3">
             {' '}
             <Button
@@ -416,32 +420,33 @@ console.log('contactAddress',contactAddress)
           </Col>
         )}
 
-        {!orderId  || bookingDetails?.status !== 'Completed'&& (
+        {!orderId ||
+          (bookingDetails?.status !== 'Completed' && (
+            <Col md="3">
+              <Button
+                color="danger"
+                className="shadow-none"
+                onClick={editOrderItemUpdate}
+                style={{ marginBottom: 10 }} // Direct function reference
+              >
+                Update Booking
+              </Button>
+            </Col>
+          ))}
 
-        <Col md="3">
-          <Button
-            color="danger"
-            className="shadow-none"
-            onClick={editOrderItemUpdate}
-            style={{marginBottom:10}} // Direct function reference
-          >
-            Update Booking
-          </Button>
-        </Col>
-          )}
-
-        {!orderId ||  bookingDetails?.status !== 'Completed' && (
-        <Col md="3">
-          <Button
-            color="danger"
-            className="shadow-none"
-            onClick={RoomVacate}
-            style={{marginBottom:10}} // Direct function reference
-          >
-            Check Out
-          </Button>
-        </Col>
-          )}
+        {!orderId ||
+          (bookingDetails?.status !== 'Completed' && (
+            <Col md="3">
+              <Button
+                color="danger"
+                className="shadow-none"
+                onClick={RoomVacate}
+                style={{ marginBottom: 10 }} // Direct function reference
+              >
+                Check Out All Room
+              </Button>
+            </Col>
+          ))}
       </Row>
       <Row>
         <Table id="example" className="display border border-secondary rounded">
@@ -458,7 +463,7 @@ console.log('contactAddress',contactAddress)
                 return (
                   <tr key={element.booking_service_id}>
                     <td>{i + 1}</td>
-                    {bookingDetails?.status !== 'Completed' ? (
+                    {element?.status === 'Check In' ? (
                       <td>
                         <div className="anchor">
                           <span
@@ -480,7 +485,7 @@ console.log('contactAddress',contactAddress)
                               setEditContactViewModal(true);
                             }}
                           >
-                           View details
+                            View details
                           </span>
                         </div>
                       </td>
@@ -496,11 +501,60 @@ console.log('contactAddress',contactAddress)
                     <td>{element.room_number}</td>
                     <td>{element.qty}</td>
                     <td>{element.amount}</td>
-                    <td>{element.qty*element.amount}</td>
-                    <td>{element.capacity}</td>
-                    {orderId  ? (
+                    <td>{element.qty * element.amount}</td>
+                    <td>{element.check_in_date ? moment(element.check_in_date).format('DD-MM-YYYY'):''}</td>
+                    <td>{element.check_in_time}</td>
+                    <td>{element.check_out_date? moment(element.check_out_date).format('DD-MM-YYYY'):''}</td>
+                    <td>{element.check_out_time}</td>
+                    <td>
+                      {/* {!orderId ||
+          (bookingDetails?.status !== 'Completed' && ( */}
+
+{orderId ? (
+  element?.status === 'Check In' ? (
+    <Button
+      color="danger"
+      className="shadow-none"
+      onClick={() => {
+        CheckOutRoomwise([element.room_number], element.booking_service_id, element.booking_id);
+        statusCheck(element.booking_id);
+      }}
+    >
+      Check Out Room
+    </Button>
+  ) : (
+    <td>
+      <span>Check Out Completed</span>
+    </td>
+  )
+) : null}
+                      {/* {element?.status === 'Check In' ? (
+                        <Button
+                          color="danger"
+                          className="shadow-none"
+                          // onClick={() =>
+                          //   CheckOutRoomwise([element.room_number], element.booking_service_id)
+                          // } // Wrapped room_number in array
+
+                          onClick={() =>{
+                            CheckOutRoomwise([element.room_number], element.booking_service_id,element.booking_id);
+                            statusCheck(element.booking_id)
+                           } }
+                        >
+                          Check Out Room
+                        </Button>
+                      ) : (
+                        <td>
+                          <span>Check Out Completed</span>
+                        </td>
+                      )} */}
+
+                      {/* ))} */}
+                    </td>
+
+                    {orderId ? (
                       <td>
-                        <text>Booking Completed</text>
+                        <text></text>
                       </td>
                     ) : element && String(element.is_available).toLowerCase() === 'yes' ? (
                       <td>

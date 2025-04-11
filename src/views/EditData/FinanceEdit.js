@@ -39,6 +39,7 @@ const FinanceEdit = () => {
   const [createInvoice, setCreateInvoice] = useState(null);
   const [cancelInvoice, setCancelInvoice] = useState(null);
   const [cancelReceipt, setCancelReceipt] = useState(null);
+
   const [receipt, setReceipt] = useState(null);
   // const [note, setNote] = useState([]);
   const [invoicesummary, setInvoiceSummary] = useState(null);
@@ -106,6 +107,32 @@ console.log('ids',id)
         message('Unable to edit record.', 'error');
       });
   };
+  const [OrdersDetails ,setOrdersDetails] = useState ('')
+  const [orderId, setOrderId] = useState(null);
+  console.log('ordersssss',orderId)
+  
+
+  const getOrdersById = () => {
+    api
+      .post('/booking/getOrdersbooking',{ booking_id: id })
+      .then((res) => {
+        setOrderId(res.data.data[0].order_id);
+        console.log('order', res.data.data);
+        setOrdersDetails(res.data.data[0])
+        api
+      .post('/invoice/getProjectReceiptById', { order_id:res.data.data[0].order_id })
+      .then((resp) => {
+        setReceipt(resp.data.data);
+      })
+      .catch(() => {
+       
+      });
+      })
+      .catch(() => {
+        
+      });
+  };
+
   //get Invoice Cancel
   const getInvoiceCancel = () => {
     api
@@ -202,7 +229,7 @@ console.log('ids',id)
   const editFinanceData = () => {
     financeDetails.modification_date = creationdatetime;
     api
-      .post('/Finance/editFinances', financeDetails)
+      .post('/Finance/editFinancesCus', financeDetails)
       .then(() => {
         message('Record editted successfully', 'success');
       })
@@ -212,7 +239,21 @@ console.log('ids',id)
   };
 
   const [details ,setBookingServiceAmount] = useState ('')
+  const [totalAmount ,setBookingServiceAmountm] = useState ('')
   const [bookingServicename ,setBookingServiceName] = useState ('')
+  const [isLoading, setIsLoading] = useState(false);
+  console.log(details)
+  const getServiceAmountSSS = () => {
+    api
+      .post('/booking/getBookingAmount', { booking_id: id })
+      .then((res) => {
+        setBookingServiceAmountm(res.data.data[0]);
+      })
+      .catch(() => {
+       
+      });
+  };
+
 
   const getServiceAmount = () => {
     api
@@ -236,51 +277,163 @@ console.log('ids',id)
       });
   };
 
-  const placeOrder = () => {
-    if (!details || !details.total_amount) {
-      console.error("Total amount is missing!");
-      return;
-    }
+  const placeOrder = async () => {
+    try {
+
+      const isConfirmed = window.confirm("Are you sure you want to Create Invoice?");
+      
+          if (!isConfirmed) {
+            return; // Stop execution if the user cancels
+          }
+
+      if (!totalAmount || !totalAmount.total_amount) {
+        console.error("Total amount is missing!");
+        return;
+      }
+
+      setIsLoading(true);
+
+      const invoiceCodeResponse = await api.post('/commonApi/getCodeValue', { type: "invoice",});
+      const invoiceCode = invoiceCodeResponse.data.data;
+
+        // Fetch GST value
+    const getgst = await api.get('/finance/getGst');
+    const gstData = getgst.data.data;  // This is likely an object { value: '12' }
+    
+    // Extract GST percentage safely
+    const gstPercentage = parseFloat(gstData.value);  // Convert '12' (string) to 12 (number)
+    
+    const getIgst = await api.get('/finance/getIGst');
+    const gstDataIgst = getIgst.data.data;  // This is likely an object { value: '12' }
+    
+    // Extract GST percentage safely
+    const gstPercentagesgst = parseFloat(gstDataIgst.value);
+
+    const getcgst = await api.get('/finance/getSGst');
+    const gstDatacgst = getcgst.data.data;  // This is likely an object { value: '12' }
+    
+    // Extract GST percentage safely
+    const gstPercentagecgst = parseFloat(gstDatacgst.value);
+    
+
+    console.log('GST Percentage:', gstPercentage);
+
+    // ✅ Correct GST Calculation
+    const totalAmountValue = parseFloat(totalAmount.total_amount); // Ensure it's a number
+    const gstValue = totalAmountValue * (gstPercentage / 100); 
+    const sgstValue = totalAmountValue * (gstPercentagesgst / 100); 
+    const cgstValue = totalAmountValue * (gstPercentagecgst / 100);
+    const invoiceAmount = totalAmountValue + gstValue; 
+
+    console.log('GST Value:', gstValue);
+    console.log('Invoice Amount:', invoiceAmount);
+
+    // Prepare updated order details
+    const updatedBookingService = { 
+      ...OrdersDetails, 
+      invoice_amount: invoiceAmount, 
+      gst_value: gstValue,
+      sgst:sgstValue,
+      cgst:cgstValue,
+      status: 'Due',
+      invoice_code: invoiceCode
+    };
+      // Insert invoice
+      const res = await api.post("/finance/insertInvoice", updatedBookingService);
+      
+      if (!res.data.data.insertId) {
+        throw new Error("Invoice insertion failed!");
+      }
+      
+      const insertedId = res.data.data.insertId;
   
-    // Ensure bookingService is an object before modifying
-    const updatedBookingService = { ...details, invoice_amount: details.total_amount,status: 'Due' };
+      // Prepare order items for insertion
+      const orderItemPromises = bookingServicename.map((item) => {
+        const orderItem = {
+          contact_id: item.contact_id,
+          invoice_id: insertedId,
+          unit_price: item.unit_price,
+          total_cost: item.unit_price * item.qty,
+          item_title: item.item_title,
+          qty: item.qty,
+          booking_id: item.booking_id,
+          status: 'Due'
+        };
   
-    api
-      .post("/finance/insertInvoice", updatedBookingService)
-      .then((res) => {
-        if (!res.data.data.insertId) {
-          throw new Error("Invoice insertion failed!");
-        }
-        
-        const insertedId = res.data.data.insertId;
+        console.log("Order item:", orderItem);
   
-        const orderItemPromises = bookingServicename.map((item) => {
-          const orderItem = {
-            contact_id: item.contact_id,
-            invoice_id: insertedId,
-            unit_price: item.amount,
-            total_cost: item.amount* item.qty,
-            item_title: item.room_type,
-            qty: item.qty,
-            booking_id: item.booking_id,
-            status: 'Due'
-          };
-  
-          console.log("Order item:", orderItem);
-  
-          return api.post("/finance/insertInvoiceItem", orderItem);
-        });
-  
-        return Promise.all(orderItemPromises);
-      })
-      .then(() => {
-        window.location.reload();
-        console.log("All order items inserted successfully.");
-      })
-      .catch((err) => {
-        console.error("Error placing order:", err);
+        return api.post("/finance/insertInvoiceItem", orderItem);
       });
+  
+      // Wait for all order items to be inserted
+      await Promise.all(orderItemPromises);
+  
+      // Update booking status
+      const bookingStatus = { 
+        status: "Completed", 
+        booking_id: id
+      };
+  
+      await api.post("/booking/edit-Booking_status", bookingStatus);
+  
+      console.log("All order items inserted successfully.");
+      
+      // Reload page after everything is completed
+      window.location.reload();
+  
+    } catch (err) {
+      console.error("Error placing order:", err);
+    }
+    finally {
+      setIsLoading(false); // Hide loader after API call (success or failure)
+    }
   };
+
+  // const placeOrder = () => {
+  //   if (!details || !details.total_amount) {
+  //     console.error("Total amount is missing!");
+  //     return;
+  //   }
+  
+  //   // Ensure bookingService is an object before modifying
+  //   const updatedBookingService = { ...details, invoice_amount: details.total_amount,status: 'Due' };
+  
+  //   api
+  //     .post("/finance/insertInvoice", updatedBookingService)
+  //     .then((res) => {
+  //       if (!res.data.data.insertId) {
+  //         throw new Error("Invoice insertion failed!");
+  //       }
+        
+  //       const insertedId = res.data.data.insertId;
+  
+  //       const orderItemPromises = bookingServicename.map((item) => {
+  //         const orderItem = {
+  //           contact_id: item.contact_id,
+  //           invoice_id: insertedId,
+  //           unit_price: item.amount,
+  //           total_cost: item.amount* item.qty,
+  //           item_title: item.room_type,
+  //           qty: item.qty,
+  //           booking_id: item.booking_id,
+  //           status: 'Due'
+  //         };
+  
+  //         console.log("Order item:", orderItem);
+  
+  //         return api.post("/finance/insertInvoiceItem", orderItem);
+  //       });
+  
+  //       return Promise.all(orderItemPromises);
+  //     })
+  //     .then(() => {
+  //       window.location.reload();
+  //       console.log("All order items inserted successfully.");
+  //     })
+  //     .catch((err) => {
+  //       console.error("Error placing order:", err);
+  //     });
+  // };
 
   useEffect(() => {
     getInvoiceById();
@@ -294,9 +447,17 @@ console.log('ids',id)
     getInvoiceSummaryById();
     getInvoiceReceiptSummaryById();
     getInvoiceItemSummaryById();
+    getOrdersById();
+    getServiceAmountSSS();
   }, [id]);
   return (
     <>
+     {isLoading && (
+  <div className="loader-overlay">
+    <div className="spinner"></div>
+    <p>Processing your Invoice...</p>
+  </div>
+)}
       <BreadCrumbs heading={financeDetails && financeDetails.order_id} />
       {/* Save,Apply Buttons */}
       {/* <FinanceButton

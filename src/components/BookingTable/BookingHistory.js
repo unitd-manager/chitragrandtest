@@ -25,13 +25,13 @@ export default function BookingHistory({
       name: 'From Date',
      },
     {
-      name: 'Court',
-    },
-    {
       name: 'From Time',
     },
     {
-      name: 'To Time',
+      name: 'Room Count',
+    },
+    {
+      name: 'Room Numbers',
     },
     {
       name: 'Booking Status',
@@ -58,9 +58,9 @@ export default function BookingHistory({
                   <tr key={element.contact_id}>
                     <td>{i + 1}</td>
                     <td>{element.booking_date}</td>
-                    <td>{element.hall}</td>
                     <td>{element.assign_time}</td>
-                    <td>{element.to_assign_time}</td>
+                    <td>{element.booking_service_count}</td>
+                    <td>{element.room_details}</td>
                     <td>{element.status}</td>
                     <td>{element.payment_status}</td>
                   </tr>
