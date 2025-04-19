@@ -196,7 +196,7 @@ const HotelDashboard3 = ({
         booking_cart_id: bookingCartId,
         name: customer.first_name,
         address: customer.address,
-        phone: customer.mobile,
+        phone: customer.phone_direct,
         email: customer.email,
         city: customer.city,
         address_country: customer.address_country,
@@ -592,7 +592,7 @@ const HotelDashboard3 = ({
                 <Col md="6">
                   <Input
                     type="text"
-                    name="mobile"
+                    name="phone_direct"
                     placeholder="Phone Number"
                     className="mb-2"
                     value={customer.phone_direct}
@@ -615,10 +615,10 @@ const HotelDashboard3 = ({
                 <Col md="6">
                   <Input
                     type="text"
-                    name="city"
+                    name="address_state"
                     placeholder="City"
                     className="mb-2"
-                    value={customer.city}
+                    value={customer.address_state}
                     onChange={handleInputChange}
                   />
                 </Col>
