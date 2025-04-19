@@ -65,6 +65,8 @@ const CheckInList = () => {
     setNewContactDataNew({ ...newContactDataNew, [e.target.name]: e.target.value });
   };
 
+  const currentDateTime = moment().format('YYYY-MM-DD HH:mm:ss');
+
   const BookingHistory = (roomTyp) => {
     api
       .post('/booking/BookingHistoryById', { room_type: roomTyp })
@@ -178,6 +180,7 @@ const CheckInList = () => {
                       booking_id:checkIns[0]?.booking_id ,
                       action_type: 'New Room',
                       contact_id: checkIns[0]?.contact_id,
+                      creation_date:currentDateTime,
                       description:newContactDataNew?.room_number,
                     };
 
@@ -255,6 +258,7 @@ const CheckInList = () => {
         booking_id: checkIns[0]?.booking_id,
         action_type: 'Roon Change',
         contact_id: checkIns[0]?.contact_id,
+        creation_date:currentDateTime,
         description: `${selectedRoom?.room_number} TO ${newContactData?.room_number}`,
       };
       

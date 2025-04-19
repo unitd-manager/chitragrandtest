@@ -12,6 +12,7 @@ import {
   ModalHeader,
 } from 'reactstrap';
 import PropTypes from 'prop-types';
+import moment from 'moment';
 import message from '../Message';
 import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
 import '../../views/form-editor/editor.scss';
@@ -33,13 +34,17 @@ const ContactEditModal = ({
     fetchRoomDetails: PropTypes.func,
   };
 
+  const [additionalWaterQty, setAdditionalWaterQty] = useState(0);
   const [contactinsert, setContactInsert] = useState(null);
+
 
   const handleInputs = (e) => {
     setContactInsert({ ...contactinsert, [e.target.name]: e.target.value });
   };
 
   const parseValue = (value) => (value ? parseFloat(value) || 0 : 0);
+
+  const currentDateTime = moment().format('YYYY-MM-DD HH:mm:ss');
 
   useEffect(() => {
     setContactInsert(contactData);
@@ -108,7 +113,8 @@ const ContactEditModal = ({
           booking_id: contactinsert.booking_id,
           action_type: 'Water qty',
           contact_id: contactData.contact_id,
-          description: `${contactinsert?.room_number} Total Water Bottles ${contactinsert?.water_qty}`,
+          creation_date:currentDateTime,
+          description: `Room Number${contactinsert?.room_number} Add Water Bottles ${additionalWaterQty} Total Water Bottles ${contactinsert?.water_qty}`,
         };
         
   
@@ -167,11 +173,8 @@ const ContactEditModal = ({
             ['Room Price', 'amount'],
             ['Extra Person', 'extra_person'],
             ['Per Person Price', 'extra_person_amount'],
-            ['Water Qty', 'water_qty'],
-            ['Per Water', 'water_amount'],
             ['Total Person', 'capacity'],
             ['Food Service Amount', 'restaurant_service_amount'],
-            ['Discount', 'discount'],
           ].map(([label, name]) => (
             <Col md="6" >
               <FormGroup>
@@ -186,48 +189,69 @@ const ContactEditModal = ({
               </FormGroup>
             </Col>
           ))}
-            {/* <Col md="6">
+      <Col md="6">
   <FormGroup>
-    <Label>Water Qty</Label>
+    <Label>Total Water Bottles</Label>
+   {/* <strong>{contactinsert?.water_qty || 0}</strong> */}
+   
+   <Col md="12">
+              <FormGroup>
+                <Label>Per Water</Label>
+                <Input
+                  type="text"
+                  onChange={handleInputs}
+                  value={contactinsert?.water_qty || 0}
+                  name="water_qty"
+                  disabled
+                />
+              </FormGroup>
+            </Col>
     <div className="d-flex align-items-center">
       <Button
         color="secondary"
         size="sm"
         onClick={() =>
-          setContactInsert((prevState) => ({
-            ...prevState,
-            water_qty: Math.max(parseValue(prevState?.water_qty) - 1, 0),
-          }))
+          setAdditionalWaterQty((prev) => Math.max(prev - 1, 0))
         }
       >
         -
       </Button>
       <Input
         type="number"
-        name="water_qty"
-        value={contactinsert?.water_qty || 0}
-        onChange={handleInputs}
+        value={additionalWaterQty}
+        onChange={(e) => setAdditionalWaterQty(Number(e.target.value))}
         className="mx-2 text-end"
-        style={{ width: '80px' }}
+        style={{ width: '70px' }}
         min="0"
       />
       <Button
         color="secondary"
         size="sm"
-        onClick={() =>
-          setContactInsert((prevState) => ({
-            ...prevState,
-            water_qty: parseValue(prevState?.water_qty) + 1,
-          }))
-        }
+        onClick={() => setAdditionalWaterQty((prev) => prev + 1)}
       >
         +
+      </Button>
+   
+   
+
+      <Button
+        color="primary"
+        size="sm"
+        onClick={() => {
+          const newTotal = parseValue(contactinsert?.water_qty) + parseValue(additionalWaterQty);
+          setContactInsert((prevState) => ({
+            ...prevState,
+            water_qty: newTotal,
+          }));
+          // setAdditionalWaterQty(0); // Reset after adding
+        }}
+      >
+        Add Qty
       </Button>
     </div>
   </FormGroup>
 </Col>
-
-            <Col md="6">
+<Col md="6">
               <FormGroup>
                 <Label>Per Water</Label>
                 <Input
@@ -237,7 +261,19 @@ const ContactEditModal = ({
                   name="water_amount"
                 />
               </FormGroup>
-            </Col> */}
+            </Col>
+
+            <Col md="6">
+              <FormGroup>
+                <Label>Discount</Label>
+                <Input
+                  type="text"
+                  onChange={handleInputs}
+                  value={contactinsert?.discount || ''}
+                  name="discount"
+                />
+              </FormGroup>
+            </Col>  
 
           <Col md="12" className="mt-4">
             <div className="p-3 border rounded bg-light">
